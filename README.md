@@ -1,93 +1,146 @@
-# QuickFFSync
+# QuickFFSync 🚀
 
+A Python GUI for **FFmpeg** with **Intel Quick Sync hardware encoding** (HEVC / H.264 / AV1 / VP9).  
+It provides a simple dark-themed interface with drag-and-drop support, presets, trimming, previews, and advanced encoder/audio/FPS options – no need to manually write FFmpeg commands.
 
+---
 
-## Getting started
+## Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **Drag and drop** video files into the window
+- **Codec support:** HEVC (H.265), H.264, AV1, VP9 via Intel Quick Sync
+- **Bitrate mode** or **Intelligent Constant Quality (ICQ) mode**
+- **Audio settings:** disable, copy, AAC (96k / 160k / 256k) or custom
+- **Advanced encoder options:**
+  - Async Depth, Threads, Presets
+  - Profiles (main, main10, baseline, high, etc.)
+  - Scenarios (archive, livestreaming, videoconference, etc.)
+  - Rate-control (VBR, CBR)
+  - QSV-specific toggles: RDO, MBBRC, Extended BRC, Look Ahead Depth
+- **FPS and scaling settings**
+  - Change FPS (source, 60, 50, 30, 23.976, custom)
+  - Resize to HD/FHD/QHD/4K/Custom width
+  - Interpolation algorithms (bilinear, bicubic, neighbor, area, lanczos, spline)
+- **Additional options**
+  - Visual trimming with interactive slider and thumbnail preview
+  - Streamcopy mode
+  - Add custom FFmpeg options
+  - Video filters (speed control, sharpness, saturation, denoise, HDR→SDR, crop, etc.)
+  - Audio filters (atempo, loudnorm, volume, etc.)
+- **Presets system** for quick configuration (FHD Fast, FHD Quality, HD Fast, HD Quality)
+- **10-second preview** encoding with current settings
+- **Estimated output size** (bitrate mode only)
+- **Built-in player buttons:** Play Input, Play Preview, Play Output
+- **Command preview** – shows full FFmpeg command, editable, copyable
+- **Real-time progress tracking** during conversion
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## Getting Started
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### Prerequisites
 
-```
-cd existing_repo
-git remote add origin https://gitlab.com/hadoukez/quickffsync.git
-git branch -M main
-git push -uf origin main
-```
+To use QuickFFSync, you will need:
 
-## Integrate with your tools
+* **Windows Operating System:** The application is built for Windows 10/11.
+* **FFmpeg:** You need to have FFmpeg installed on your system and its executable (`ffmpeg.exe`) accessible in your system's PATH, or specify its path within the application.
+* **Intel CPU with Quick Sync:** For hardware-accelerated encoding, an Intel processor with Quick Sync Video technology is required. Ensure you have the latest Intel graphics drivers installed.
 
-- [ ] [Set up project integrations](https://gitlab.com/hadoukez/quickffsync/-/settings/integrations)
+### Installation
 
-## Collaborate with your team
+#### 1. Download the Executable (Recommended) 🚀
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+The easiest way to get started is to download the latest release executable (`.exe`) from the [Releases](#) page.
 
-## Test and Deploy
+1.  Go to the [Releases](#) section of this repository.
+2.  Download the `QuickFFSync.exe` file.
+3.  Run the executable.
 
-Use the built-in continuous integration in GitLab.
+#### 2. Run from Source (For Developers) 🔧
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+If you want to run the application from its Python source code:
 
-***
+1.  **Clone the repository:**
+    ```
+    git clone [repository-url]
+    cd QuickFFSync
+    ```
+2.  **Install dependencies:**
+    The project uses `customtkinter`, `pillow`, `pywin32` (for `win32gui`, `win32con`, `win32api`).
+    ```bash
+    pip install customtkinter pillow pywin32
+    ```
+3.  **Run the application:**
+    ```
+    python QuickFFSync.py
+    ```
 
-# Editing this README
+### Building Executable (For Developers) 🔧
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+You can compile the Python script into a standalone Windows executable (`.exe`) using **Nuitka**.
 
-## Suggestions for a good README
+1.  **Install Nuitka:**
+    ```
+    pip install nuitka
+    ```
+2.  **Build the executable:**
+    Navigate to the project's root directory in your terminal and run the following command:
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+    ```
+    python -m nuitka --msvc=latest --standalone --windows-console-mode=disable ^
+    --include-package=customtkinter --enable-plugin=tk-inter ^
+    --windows-icon-from-ico="qff.ico" ^
+    --include-data-file=qff.ico=./ ^
+    --include-data-file=qff-help.txt=./qff-help.txt ^
+    --product-name="QuickFFSync" ^
+    --product-version="1.0.0" ^
+    --file-version="1.0.0" ^
+    --file-description="QuickFFSync" ^
+    --company-name="QuickFFSync" ^
+    --copyright="Copyright (C) 2025" ^
+    --output-dir=build QuickFFSync.py
+    ```
+    The compiled executable will be found in the `build` directory.
 
-## Name
-Choose a self-explaining name for your project.
+---
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Usage 🎥
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+1.  **Launch the application:** Run the `.exe` file or `QuickFFSync.py`.
+2.  **Select Input File:** Click the "Browse" button or drag and drop your video file into the designated area.
+3.  **Specify Output File:** Click "Save As" to choose where to save your processed video.
+4.  **Configure Options:**
+    * **Video Codec:** Select HEVC, H.264, AV1, or VP9
+    * **Quality/Bitrate:** Choose between Intelligent Constant Quality or traditional bitrate mode
+    * **Trim Video:** Use the visual slider or enter start/end times in `HH:MM:SS` format
+    * **Audio Settings:** Configure audio codec and bitrate
+    * **Advanced Options:** Access encoder settings, FPS/scaling, and additional filters
+5.  **Preview:** Click "Play 10s Preview" to test your settings before full conversion
+6.  **Start Processing:** Click the "Convert" button to begin the video encoding
+7.  **Monitor Progress:** Watch real-time progress and FFmpeg output in the interface
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+---
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Easy Access via Windows "Send to" Context Menu 📁
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+1. Press **Win+R**, type:
+   ```
+   %APPDATA%\Microsoft\Windows\SendTo
+   ```
+2. Create a shortcut to QuickFFSync.exe in this folder
+3. You can rename it and set a custom icon
+4. Right-click any video file and use "Send to" → QuickFFSync to quickly open files
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+---
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+If you have a suggestion that would make this better, you can simply open an issue with the tag "enhancement" or "bug".
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Notes
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- This app is designed for Intel CPUs that support **Quick Sync hardware encoding**
+- For NVIDIA GPUs, consider using NVENC-based tools
+- For AMD GPUs, consider using AMF-based tools
+- The tool is intended for Windows only
+- Make sure FFmpeg is compiled with Intel Quick Sync support for optimal performance
