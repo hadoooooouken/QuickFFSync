@@ -1,3 +1,5 @@
+![qff-mainwindow_start](screenshots/qff-mainwindow_start.png)
+
 # QuickFFSync 🚀
 
 A Python GUI for **FFmpeg** with **Intel Quick Sync hardware encoding** (HEVC / H.264 / AV1 / VP9).  
