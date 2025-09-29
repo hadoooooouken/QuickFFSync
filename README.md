@@ -34,6 +34,8 @@ It provides a simple dark-themed interface with drag-and-drop support, presets, 
 - **Command preview** – shows full FFmpeg command, editable, copyable
 - **Real-time progress tracking** during conversion
 
+![qff-mainwindow_start](screenshots/qff-mainwindow_settings.png)
+
 ---
 
 ## Getting Started
@@ -44,15 +46,16 @@ To use QuickFFSync, you will need:
 
 * **Windows Operating System:** The application is built for Windows 10/11.
 * **FFmpeg:** You need to have FFmpeg installed on your system and its executable (`ffmpeg.exe`) accessible in your system's PATH, or specify its path within the application.
-* **Intel CPU with Quick Sync:** For hardware-accelerated encoding, an Intel processor with Quick Sync Video technology is required. Ensure you have the latest Intel graphics drivers installed.
+FFmpeg Windows builds links: [Windows builds from gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or [Windows builds by BtbN](https://github.com/BtbN/FFmpeg-Builds/releases)
+* **Intel CPU or Arc GPU with Quick Sync:** For hardware-accelerated encoding, an Intel processor or Arc GPU with Quick Sync Video technology is required. Ensure you have the latest Intel graphics drivers installed.
 
 ### Installation
 
 #### 1. Download the Executable (Recommended) 🚀
 
-The easiest way to get started is to download the latest release executable (`.exe`) from the [Releases](#) page.
+The easiest way to get started is to download the latest release executable (`.exe`) from the [Releases](https://gitlab.com/hadoukez/quickffsync/-/releases) page.
 
-1.  Go to the [Releases](#) section of this repository.
+1.  Go to the [Releases](https://gitlab.com/hadoukez/quickffsync/-/releases) section of this repository.
 2.  Download the `QuickFFSync.exe` file.
 3.  Run the executable.
 
@@ -62,8 +65,8 @@ If you want to run the application from its Python source code:
 
 1.  **Clone the repository:**
     ```
-    git clone [repository-url]
-    cd QuickFFSync
+    git clone https://gitlab.com/hadoukez/QuickFFSync.git
+    cd RedFFmpegatron
     ```
 2.  **Install dependencies:**
     The project uses `customtkinter`, `pillow`, `pywin32` (for `win32gui`, `win32con`, `win32api`).
@@ -100,7 +103,7 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
     --copyright="Copyright (C) 2025" ^
     --output-dir=build QuickFFSync.py
     ```
-    The compiled executable will be found in the `build` directory.
+  The compiled executable will be found in the `build` directory specified by `--output-dir`.
 
 ---
 
@@ -110,26 +113,27 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
 2.  **Select Input File:** Click the "Browse" button or drag and drop your video file into the designated area.
 3.  **Specify Output File:** Click "Save As" to choose where to save your processed video.
 4.  **Configure Options:**
-    * **Video Codec:** Select HEVC, H.264, AV1, or VP9
-    * **Quality/Bitrate:** Choose between Intelligent Constant Quality or traditional bitrate mode
-    * **Trim Video:** Use the visual slider or enter start/end times in `HH:MM:SS` format
-    * **Audio Settings:** Configure audio codec and bitrate
-    * **Advanced Options:** Access encoder settings, FPS/scaling, and additional filters
-5.  **Preview:** Click "Play 10s Preview" to test your settings before full conversion
-6.  **Start Processing:** Click the "Convert" button to begin the video encoding
-7.  **Monitor Progress:** Watch real-time progress and FFmpeg output in the interface
+    * **Video Codec:** Select HEVC, H.264, AV1, or VP9.
+    * **Quality/Bitrate:** Choose between Intelligent Constant Quality or traditional bitrate mode.
+    * **Trim Video:** Use the visual slider or enter start/end times in `HH:MM:SS` format.
+    * **Audio Settings:** Configure audio codec and bitrate.
+    * **Advanced Options:** Access encoder settings, FPS/scaling, and additional filters.
+5.  **Preview:** Click "Play 10s Preview" to test your settings before full conversion.
+6.  **Start Processing:** Click the "Convert" button to begin the video encoding.
+7.  **Monitor Progress:** Watch real-time progress and FFmpeg output in the interface.
 
 ---
 
 ## Easy Access via Windows "Send to" Context Menu 📁
 
+![sendto](screenshots/sendto.png)
+
 1. Press **Win+R**, type:
    ```
    %APPDATA%\Microsoft\Windows\SendTo
    ```
-2. Create a shortcut to QuickFFSync.exe in this folder
-3. You can rename it and set a custom icon
-4. Right-click any video file and use "Send to" → QuickFFSync to quickly open files
+2. Modify APP_PATH in "Send to QuickFFSync.bat" script and create shortcut to it here.
+3. You can rename it and set custom icon.
 
 ---
 
@@ -140,7 +144,6 @@ If you have a suggestion that would make this better, you can simply open an iss
 ## Notes
 
 - This app is designed for Intel CPUs that support **Quick Sync hardware encoding**
-- For NVIDIA GPUs, consider using NVENC-based tools
-- For AMD GPUs, consider using AMF-based tools
-- The tool is intended for Windows only
-- Make sure FFmpeg is compiled with Intel Quick Sync support for optimal performance
+- For NVIDIA GPUs, consider using [nvencFF Toolbox](https://gitlab.com/hadoukez/nvencff-toolbox).
+- For AMD GPUs, consider using [RedFFmpegatron](https://gitlab.com/hadoukez/redffmpegatron).
+- The tool is intended for Windows only.
