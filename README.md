@@ -68,7 +68,7 @@ If you want to run the application from its Python source code:
 1.  **Clone the repository:**
     ```
     git clone https://gitlab.com/hadoukez/QuickFFSync.git
-    cd RedFFmpegatron
+    cd QuickFFSync
     ```
 2.  **Install dependencies:**
     The project uses `customtkinter`, `pillow`, `pywin32` (for `win32gui`, `win32con`, `win32api`).
