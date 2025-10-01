@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import tkinter as tk
+from json import load, dump
 from io import BytesIO
 from re import sub
 from shlex import split
@@ -17,6 +18,7 @@ from win32con import GWL_WNDPROC, WM_DROPFILES
 from win32gui import CallWindowProc, DragAcceptFiles, SetWindowLong
 
 # UI Theme and Colors
+# ctk.ThemeManager.theme["CTkFont"].update({"family": "Segoe UI", "size": 12})
 ctk.set_appearance_mode("dark")
 PRIMARY_BG = "#151f43"
 SECONDARY_BG = "#202e5d"
@@ -77,6 +79,9 @@ class VideoConverterApp:
                 0, lambda: self.input_file_entry.configure(text_color=TEXT_COLOR_W)
             )
 
+            self.master.after(
+                0, lambda: self.last_input_dir.set(os.path.dirname(normalized_path))
+            )
             base_name = os.path.splitext(os.path.basename(normalized_path))[0]
             codec_suffix = (
                 "_hevc"
@@ -87,9 +92,17 @@ class VideoConverterApp:
                 if self.video_codec.get() == "av1"
                 else "_vp9"
             )
+
+            if self.last_output_dir.get() and os.path.exists(
+                self.last_output_dir.get()
+            ):
+                output_dir = self.last_output_dir.get()
+            else:
+                output_dir = os.path.dirname(normalized_path)
+
             output_path = os.path.normpath(
                 os.path.join(
-                    os.path.dirname(normalized_path),
+                    output_dir,
                     f"{base_name}{codec_suffix}_custom.mp4",
                 )
             )
@@ -148,7 +161,7 @@ class VideoConverterApp:
         self.preview_job = None  # used for debouncing preview creation
         self.video_metadata_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.0.1")
+        master.title("QuickFFSync 1.0.2")
         master.geometry("800x700")
         master.minsize(800, 700)
         master.maxsize(800, 900)
@@ -175,14 +188,13 @@ class VideoConverterApp:
         self._setup_variables()
         self._create_widgets()
         self._update_codec_settings()
-        self._toggle_icq_mode()  # Enabled ICQ by default
 
         # Find FFmpeg executables (critical dependency)
         self.ffmpeg_path = self._find_executable("ffmpeg.exe")
         self.ffprobe_path = None
 
-        # Try to load saved path
-        saved_path = self._load_ffmpeg_path()
+        # Try to load saved settings
+        saved_path = self._load_settings()
         if saved_path:
             self.ffmpeg_path = saved_path
         else:
@@ -202,6 +214,7 @@ class VideoConverterApp:
         if self.ffmpeg_path:
             self.ffmpeg_path_entry.configure(text_color=TEXT_COLOR_W)
 
+        # JSON Trace changes
         self.video_codec.trace_add("write", self._update_output_filename)
 
         self.conversion_process = None
@@ -222,6 +235,39 @@ class VideoConverterApp:
         # Help windows
         self.output_window_open = False
         self.open_help_windows = {}
+
+        # JSON Settings
+        self.ffmpeg_custom_path.trace_add(
+            "write", lambda *args: self._on_setting_changed()
+        )
+        self.last_input_dir.trace_add("write", lambda *args: self._on_setting_changed())
+        self.last_output_dir.trace_add(
+            "write", lambda *args: self._on_setting_changed()
+        )
+        self.video_codec.trace_add("write", lambda *args: self._on_setting_changed())
+        self.icq_mode.trace_add("write", lambda *args: self._on_setting_changed())
+        self.global_quality_level.trace_add(
+            "write", lambda *args: self._on_setting_changed()
+        )
+        self.bitrate.trace_add("write", lambda *args: self._on_setting_changed())
+        self.audio_option.trace_add("write", lambda *args: self._on_setting_changed())
+        self._toggle_icq_mode()  # Enabled ICQ by default
+
+        # Encoder Settings
+        self.threads.trace_add("write", lambda *args: self._on_setting_changed())
+        self.async_depth.trace_add("write", lambda *args: self._on_setting_changed())
+        self.preset.trace_add("write", lambda *args: self._on_setting_changed())
+        self.scenario.trace_add("write", lambda *args: self._on_setting_changed())
+        self.profile.trace_add("write", lambda *args: self._on_setting_changed())
+        self.tier.trace_add("write", lambda *args: self._on_setting_changed())
+        self.hwaccel.trace_add("write", lambda *args: self._on_setting_changed())
+        self.rdo.trace_add("write", lambda *args: self._on_setting_changed())
+        self.mbbrc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.extbrc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.look_ahead_depth.trace_add(
+            "write", lambda *args: self._on_setting_changed()
+        )
+        self.rc.trace_add("write", lambda *args: self._on_setting_changed())
 
     def _create_10s_preview(self):
         """Create a 10-second preview with current settings"""
@@ -463,6 +509,8 @@ class VideoConverterApp:
         self.extbrc.trace_add("write", self._toggle_la_depth_state)
         self.is_creating_preview = False
         self.custom_command = None
+        self.last_input_dir = ctk.StringVar(value="")
+        self.last_output_dir = ctk.StringVar(value="")
 
     def _setup_keyboard_shortcuts(self):
         self.master.bind_all("<Control-KeyPress>", self._handle_key_press)
@@ -738,7 +786,7 @@ class VideoConverterApp:
             text_color=TEXT_COLOR_B,
             width=80,
         )
-        self.auto_button.grid(row=5, column=1, sticky="w", padx=5, pady=5)
+        self.auto_button.grid(row=5, column=1, sticky="w", padx=5)
         self.auto_button.grid_remove()
 
         self.encoder_options_frame = ctk.CTkFrame(main_frame, fg_color=SECONDARY_BG)
@@ -1708,8 +1756,10 @@ class VideoConverterApp:
             # Switch to Intelligent Constant Quality mode - replace bitrate with quality
             self.bitrate_label.configure(text="Quality Level:")
             self.bitrate_entry.configure(textvariable=self.global_quality_level)
+
+            current_quality = self.global_quality_level.get()
             self.bitrate_entry.delete(0, "end")
-            self.bitrate_entry.insert(0, "30")
+            self.bitrate_entry.insert(0, current_quality)
 
             # Disable Rate-Control selection
             # Note: rc_locked variable might also need to be defined if it doesn't exist
@@ -1728,8 +1778,10 @@ class VideoConverterApp:
             # Switch back to normal mode - replace quality with bitrate
             self.bitrate_label.configure(text="Video Bitrate (k):")
             self.bitrate_entry.configure(textvariable=self.bitrate)
+
+            current_bitrate = self.bitrate.get()
             self.bitrate_entry.delete(0, "end")
-            self.bitrate_entry.insert(0, "6000")
+            self.bitrate_entry.insert(0, current_bitrate)
 
             # Enable Rate-Control selection
             if hasattr(self, "rc_locked"):
@@ -1785,9 +1837,12 @@ class VideoConverterApp:
 
     def _show_output_command(self):
         if getattr(self, "output_window_open", False):
-            return
-
-        self.output_window_open = True
+            if hasattr(self, "output_window") and self.output_window.winfo_exists():
+                self.output_window.lift()
+                self.output_window.focus_force()
+                return
+            else:
+                self.output_window_open = False
 
         if not self.input_file.get():
             messagebox.showerror("Error", "Please select an input file first.")
@@ -1804,9 +1859,18 @@ class VideoConverterApp:
 
             def on_close():
                 self.output_window_open = False
-                output_window.destroy()
+                if hasattr(self, "output_window"):
+                    self.output_window.destroy()
+                    del self.output_window
+
+            if os.path.exists(icon_path):
+                output_window.after(201, lambda: output_window.iconbitmap(icon_path))
+            else:
+                print(f"icon not found: {icon_path}")
 
             output_window.protocol("WM_DELETE_WINDOW", on_close)
+            self.output_window = output_window
+            self.output_window_open = True
 
             text_frame = ctk.CTkFrame(output_window)
             text_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -2427,7 +2491,7 @@ class VideoConverterApp:
             self.ffmpeg_path_entry.configure(text_color=TEXT_COLOR_W)
             # Save the path if it exists
             if os.path.exists(current_text) and os.path.isfile(current_text):
-                self._save_ffmpeg_path(current_text)
+                self._save_settings()
                 self.ffmpeg_path = current_text
                 self.ffprobe_path = os.path.join(
                     os.path.dirname(current_text), "ffprobe.exe"
@@ -2520,39 +2584,171 @@ class VideoConverterApp:
         except FileNotFoundError:
             return None
 
-    def _save_ffmpeg_path(self, path):
-        """Save FFmpeg path to a file in the program directory"""
+    def _save_settings(self):
+        """Save all settings to JSON file"""
         try:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            path_file = os.path.join(script_dir, "ffmpeg_path.txt")
-            with open(path_file, "w") as file:
-                file.write(path)
+            settings_file = os.path.join(script_dir, "qff_settings.json")
+
+            settings = {
+                # Main Settings
+                "ffmpeg_path": self.ffmpeg_custom_path.get()
+                if self.ffmpeg_custom_path.get() != self.ffmpeg_path_placeholder
+                else "",
+                "last_input_dir": self.last_input_dir.get(),
+                "last_output_dir": self.last_output_dir.get(),
+                "codec": self.video_codec.get(),
+                "bitrate": self.bitrate.get(),
+                "icq_mode": self.icq_mode.get(),
+                "quality_level": self.global_quality_level.get(),
+                "audio_option": self.audio_option.get(),
+                # Advanced Encoder Settings
+                "encoder_threads": self.threads.get(),
+                "encoder_async_depth": self.async_depth.get(),
+                "encoder_preset": self.preset.get(),
+                "encoder_scenario": self.scenario.get(),
+                "encoder_profile": self.profile.get(),
+                "encoder_tier": self.tier.get(),
+                "encoder_hwaccel": self.hwaccel.get(),
+                "encoder_rc": self.rc.get(),
+                "encoder_look_ahead_depth": self.look_ahead_depth.get(),
+                "encoder_rdo": self.rdo.get(),
+                "encoder_mbbrc": self.mbbrc.get(),
+                "encoder_extbrc": self.extbrc.get(),
+                "version": "1.0.2",
+            }
+
+            with open(settings_file, "w", encoding="utf-8") as file:
+                dump(settings, file, indent=4, ensure_ascii=False)
         except Exception as e:
-            print(f"Error saving FFmpeg path: {e}")
+            print(f"Error saving settings: {e}")
 
-    def _load_ffmpeg_path(self):
-        """Load FFmpeg path from file if it exists and is valid"""
+    def _load_settings(self):
+        """Load settings from JSON file"""
         try:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            path_file = os.path.join(script_dir, "ffmpeg_path.txt")
+            settings_file = os.path.join(script_dir, "qff_settings.json")
 
-            if os.path.exists(path_file):
-                with open(path_file, "r") as file:
-                    saved_path = file.read().strip()
+            if os.path.exists(settings_file):
+                with open(settings_file, "r", encoding="utf-8") as file:
+                    settings = load(file)
 
-                if os.path.exists(saved_path) and os.path.isfile(saved_path):
-                    self.ffmpeg_path = saved_path
+                # Load FFmpeg path
+                ffmpeg_path = settings.get("ffmpeg_path", "")
+                if (
+                    ffmpeg_path
+                    and os.path.exists(ffmpeg_path)
+                    and os.path.isfile(ffmpeg_path)
+                ):
+                    self.ffmpeg_path = ffmpeg_path
+                    # Look for ffprobe in the same directory
                     ffprobe_path = os.path.join(
-                        os.path.dirname(saved_path), "ffprobe.exe"
+                        os.path.dirname(ffmpeg_path), "ffprobe.exe"
                     )
                     if os.path.exists(ffprobe_path):
                         self.ffprobe_path = ffprobe_path
                     else:
                         self.ffprobe_path = None
-                    return saved_path
+
+                # Load last input dir
+                last_input_dir = settings.get("last_input_dir", "")
+                if last_input_dir:
+                    self.last_input_dir.set(last_input_dir)
+
+                # Load last output dir
+                last_output_dir = settings.get("last_output_dir", "")
+                if last_output_dir:
+                    self.last_output_dir.set(last_output_dir)
+
+                # Load last codec
+                last_codec = settings.get("codec", "")
+                if last_codec in ["hevc", "h264", "av1"]:
+                    self.video_codec.set(last_codec)
+
+                # ICQ state
+                icq_mode = settings.get("icq_mode")
+                if icq_mode is not None:
+                    self.icq_mode.set(icq_mode)
+
+                # ICQ quality
+                quality_level = settings.get("quality_level", "")
+                if quality_level:
+                    self.global_quality_level.set(quality_level)
+
+                # Load last bitrate
+                last_bitrate = settings.get("bitrate", "")
+                if last_bitrate:
+                    self.bitrate.set(last_bitrate)
+
+                # Load audio option
+                last_audio_option = settings.get("audio_option", "")
+                if last_audio_option:
+                    self.audio_option.set(last_audio_option)
+
+                # Load Advanced Encoder Settings
+                encoder_threads = settings.get("encoder_threads", "")
+                if encoder_threads:
+                    self.threads.set(encoder_threads)
+
+                encoder_async_depth = settings.get("encoder_async_depth", "")
+                if encoder_async_depth:
+                    self.async_depth.set(encoder_async_depth)
+
+                encoder_preset = settings.get("encoder_preset", "")
+                if encoder_preset:
+                    self.preset.set(encoder_preset)
+
+                encoder_scenario = settings.get("encoder_scenario", "")
+                if encoder_scenario:
+                    self.scenario.set(encoder_scenario)
+
+                encoder_profile = settings.get("encoder_profile", "")
+                if encoder_profile:
+                    self.profile.set(encoder_profile)
+
+                encoder_tier = settings.get("encoder_tier", "")
+                if encoder_tier:
+                    self.tier.set(encoder_tier)
+
+                encoder_hwaccel = settings.get("encoder_hwaccel", "")
+                if encoder_hwaccel:
+                    self.hwaccel.set(encoder_hwaccel)
+
+                encoder_rc = settings.get("encoder_rc", "")
+                if encoder_rc:
+                    self.rc.set(encoder_rc)
+
+                encoder_look_ahead_depth = settings.get("encoder_look_ahead_depth", "")
+                if encoder_look_ahead_depth:
+                    self.look_ahead_depth.set(encoder_look_ahead_depth)
+
+                # Load boolean encoder settings
+                encoder_rdo = settings.get("encoder_rdo")
+                if encoder_rdo is not None:
+                    self.rdo.set(encoder_rdo)
+
+                encoder_mbbrc = settings.get("encoder_mbbrc")
+                if encoder_mbbrc is not None:
+                    self.mbbrc.set(encoder_mbbrc)
+
+                encoder_extbrc = settings.get("encoder_extbrc")
+                if encoder_extbrc is not None:
+                    self.extbrc.set(encoder_extbrc)
+
+                return ffmpeg_path
         except Exception as e:
-            print(f"Error loading FFmpeg path: {e}")
+            print(f"Error loading settings: {e}")
         return None
+
+    def _on_setting_changed(self):
+        """Handle any setting change - debounced to avoid too frequent saves"""
+        if hasattr(self, "_update_output_filename"):
+            self._update_output_filename()
+
+        if hasattr(self, "_save_settings_job"):
+            self.master.after_cancel(self._save_settings_job)
+
+        self._save_settings_job = self.master.after(1000, self._save_settings)
 
     def _set_trim_end_to_duration(self):
         if (
@@ -2592,8 +2788,13 @@ class VideoConverterApp:
             self.trim_end.set("00:10:00")
 
     def _browse_input(self):
+        initial_dir = (
+            self.last_input_dir.get() if self.last_input_dir.get() else os.getcwd()
+        )
+
         filename = filedialog.askopenfilename(
             title="Select Video File",
+            initialdir=initial_dir,
             filetypes=(
                 ("Video Files", "*.mp4 *.mkv *.avi *.mov *.flv *.wmv *.webm"),
                 ("All Files", "*.*"),
@@ -2603,6 +2804,7 @@ class VideoConverterApp:
             normalized_path = os.path.normpath(filename)
             self.input_file.set(normalized_path)
             self.input_file_entry.configure(text_color=TEXT_COLOR_W)
+            self.last_input_dir.set(os.path.dirname(normalized_path))
             base_name = os.path.splitext(os.path.basename(normalized_path))[0]
             codec_suffix = (
                 "_hevc"
@@ -2616,6 +2818,19 @@ class VideoConverterApp:
             output_path = os.path.normpath(
                 os.path.join(
                     os.path.dirname(normalized_path),
+                    f"{base_name}{codec_suffix}_custom.mp4",
+                )
+            )
+            if self.last_output_dir.get() and os.path.exists(
+                self.last_output_dir.get()
+            ):
+                output_dir = self.last_output_dir.get()
+            else:
+                output_dir = os.path.dirname(normalized_path)
+
+            output_path = os.path.normpath(
+                os.path.join(
+                    output_dir,
                     f"{base_name}{codec_suffix}_custom.mp4",
                 )
             )
@@ -2633,15 +2848,21 @@ class VideoConverterApp:
             if self.output_file.get()
             else "output_hevc_custom.mp4"
         )
+
+        if self.last_output_dir.get() and os.path.exists(self.last_output_dir.get()):
+            initial_dir = self.last_output_dir.get()
+        elif os.path.dirname(default_name) and os.path.exists(
+            os.path.dirname(default_name)
+        ):
+            initial_dir = os.path.dirname(default_name)
+        else:
+            initial_dir = os.getcwd()
+
         filename = filedialog.asksaveasfilename(
             title="Save As...",
             defaultextension=".mp4",
             initialfile=os.path.basename(default_name),
-            initialdir=(
-                os.path.dirname(default_name)
-                if os.path.dirname(default_name)
-                else os.getcwd()
-            ),
+            initialdir=initial_dir,
             filetypes=(
                 ("MP4 Files", "*.mp4"),
                 ("MKV Files", "*.mkv"),
@@ -2650,7 +2871,9 @@ class VideoConverterApp:
             ),
         )
         if filename:
-            self.output_file.set(os.path.normpath(filename))
+            normalized_path = os.path.normpath(filename)
+            self.output_file.set(normalized_path)
+            self.last_output_dir.set(os.path.dirname(normalized_path))
             self.custom_command = None
 
     def _browse_ffmpeg(self):
@@ -2664,7 +2887,7 @@ class VideoConverterApp:
             self.ffmpeg_path_entry.configure(text_color=TEXT_COLOR_W)
             self.ffmpeg_path = normalized_path
 
-            self._save_ffmpeg_path(normalized_path)
+            self._save_settings()
 
             ffprobe_path = os.path.join(os.path.dirname(normalized_path), "ffprobe.exe")
             if os.path.exists(ffprobe_path):
@@ -3092,6 +3315,11 @@ class VideoConverterApp:
             self.open_help_windows["main_help"] = False
             main_help_window.destroy()
 
+        if os.path.exists(icon_path):
+            main_help_window.after(201, lambda: main_help_window.iconbitmap(icon_path))
+        else:
+            print(f"icon not found: {icon_path}")
+
         main_help_window.protocol("WM_DELETE_WINDOW", on_close)
 
         if getattr(sys, "frozen", False):
@@ -3161,6 +3389,11 @@ class VideoConverterApp:
         def on_close():
             self.open_help_windows[help_type] = False
             help_window.destroy()
+
+        if os.path.exists(icon_path):
+            help_window.after(201, lambda: help_window.iconbitmap(icon_path))
+        else:
+            print(f"icon not found: {icon_path}")
 
         help_window.protocol("WM_DELETE_WINDOW", on_close)
 
