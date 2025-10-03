@@ -99,8 +99,8 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=qff.ico=./ ^
       --include-data-file=qff-help.txt=./qff-help.txt ^
       --product-name="QuickFFSync" ^
-      --product-version="1.0.3" ^
-      --file-version="1.0.3" ^
+      --product-version="1.0.4" ^
+      --file-version="1.0.4" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
       --copyright="Copyright (C) 2025 hadouken" ^

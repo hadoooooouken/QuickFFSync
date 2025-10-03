@@ -1,6 +1,9 @@
 # QuickFFSync - Changelog
 
-## [1.0.3] - 2025-10-02
+## [1.0.4] - 2025-10-04
+- Startup UI fixes for some systems;
+- Better CPU Fallback handling.
+
 - Fixed and updated trim;
 - Added new checkboxes: Copy (same as old Streamcopy) and Precise (-ss after -i):
 - Added "Default" button in Encoder section (copy of Default preset):
