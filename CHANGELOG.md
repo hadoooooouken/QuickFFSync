@@ -1,5 +1,10 @@
 # QuickFFSync - Changelog
 
+## [1.0.5] - 2025-10-07
+- Bug fixes;
+- UI improvements;
+- Opus audio presets.
+
 ## [1.0.4] - 2025-10-04
 - Startup UI fixes for some systems;
 - Better CPU Fallback handling.
