@@ -1,0 +1,33 @@
+QuickFFSync 1.0.6
+
+Video converter and trimming tool powered by Intel Quick Sync Video acceleration.
+
+Features:
+• Hardware-accelerated video encoding and decoding
+• Support for H.264, HEVC (H.265), AV1 and VP9 codecs
+• Visual trimming with start/end time controls
+• Resolution scaling and frame rate adjustment
+• Custom audio codec, bitrate, and channel settings
+• Live FFmpeg command preview and size estimation
+• Advanced encoder parameters and presets
+• Real-time process output and encoding progress
+• Save and load configuration profiles
+
+System Requirements:
+• Intel CPU with Quick Sync Video support
+• FFmpeg with QSV support
+• Windows 10/11
+
+Credits:
+• FFmpeg — Multimedia framework
+• CustomTkinter — Modern UI components
+• PIL (Pillow) — Image processing
+
+Links:
+• GitLab Repository: https://gitlab.com/hadoukez/quickffsync
+• GitHub Mirror: https://github.com/hadoooooouken/QuickFFSync
+• FFmpeg Official: https://ffmpeg.org/
+• FFmpeg QuickSync guide: https://trac.ffmpeg.org/wiki/Hardware/QuickSync
+• Intel Quick Sync (support & docs): https://www.intel.com/content/www/us/en/support/articles/000029338/graphics.html
+
+For support and bug reports, please use the GitLab repository.

@@ -1,5 +1,11 @@
 # QuickFFSync - Changelog
 
+## [1.0.6] - 2025-10-09
+- Fixed active ICQ checkbox with VP9;
+- Added "About" info tab;
+- Added "License" info tab;
+- Build with Python: 3.13.8 + Nuitka 2.8rc16.
+
 ## [1.0.5] - 2025-10-07
 - Bug fixes;
 - UI improvements;

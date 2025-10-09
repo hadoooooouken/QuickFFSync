@@ -71,7 +71,7 @@ class VideoConverterApp:
         self.preview_job = None  # used for debouncing preview creation
         self.video_metadata_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.0.5")
+        master.title("QuickFFSync 1.0.6")
         master.geometry("800x700")
         master.minsize(800, 700)
         master.maxsize(800, 900)
@@ -2011,7 +2011,7 @@ class VideoConverterApp:
                 "custom_fps": self.custom_fps.get(),
                 "video_format_option": self.video_format_option.get(),
                 "custom_video_width": self.custom_video_width.get(),
-                "version": "1.0.5",
+                "version": "1.0.6",
             }
 
             with open(settings_file, "w", encoding="utf-8") as file:
@@ -3653,7 +3653,11 @@ class VideoConverterApp:
 
             # Reset all settings to their initial values
             self.bitrate.set("6000")
-            self.icq_mode.set(True)
+            # VP9 doesn't support ICQ - don't enable it for VP9
+            if self.video_codec.get() != "vp9":
+                self.icq_mode.set(True)
+            else:
+                self.icq_mode.set(False)
             self.global_quality_level.set("30")
             self.audio_option.set("copy")
             self.custom_abitrate.set("160")
@@ -3707,6 +3711,7 @@ class VideoConverterApp:
             self.preset_indicator.configure(
                 text="Default settings applied", text_color=ACCENT_BLUE
             )
+            self._toggle_icq_mode()
 
         elif preset_name == "fhdf":
             # FHD Fast preset
@@ -4472,6 +4477,7 @@ class VideoConverterApp:
 
         self.open_help_windows["main_help"] = True
 
+        # Create window
         main_help_window = ctk.CTkToplevel(self.master)
         main_help_window.title("QuickFFSync Help")
         main_help_window.geometry("800x700")
@@ -4484,26 +4490,20 @@ class VideoConverterApp:
 
         if os.path.exists(icon_path):
             main_help_window.after(201, lambda: main_help_window.iconbitmap(icon_path))
-        else:
-            print(f"icon not found: {icon_path}")
 
         main_help_window.protocol("WM_DELETE_WINDOW", on_close)
 
-        if getattr(sys, "frozen", False):
-            base_path = sys._MEIPASS
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
+        # Tabs frame
+        tabs_frame = ctk.CTkFrame(main_help_window, fg_color=SECONDARY_BG)
+        tabs_frame.pack(fill="x", padx=20, pady=(20, 0))
 
-        help_file_path = os.path.join(base_path, "qff-help.txt")
+        # Content frame
+        content_frame = ctk.CTkFrame(main_help_window, fg_color=SECONDARY_BG)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        try:
-            with open(help_file_path, "r", encoding="utf-8") as f:
-                help_text = f.read()
-        except Exception as e:
-            help_text = f"Help file not found at: {help_file_path}\nError: {str(e)}"
-
-        text_frame = ctk.CTkFrame(main_help_window, fg_color=SECONDARY_BG)
-        text_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Text widget
+        text_frame = ctk.CTkFrame(content_frame, fg_color=PRIMARY_BG)
+        text_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         textbox = ctk.CTkTextbox(
             text_frame,
@@ -4514,23 +4514,87 @@ class VideoConverterApp:
             scrollbar_button_hover_color=ACCENT_BLUE,
         )
         textbox.pack(fill="both", expand=True, padx=5, pady=5)
+        textbox.tag_config("heading_color", foreground=ACCENT_BLUE)
 
-        # Configure text tags
-        textbox.tag_config("heading_color", foreground=ACCENT_BLUE)  # headings color
+        # Tab management
+        tabs = [
+            ("Manual", "manual", "qff-help.txt"),
+            ("About", "about", "qff-about.txt"),
+            ("License", "license", "qff-license.txt"),
+        ]
 
-        # Parse and insert text
-        lines = help_text.split("\n")
-        for line in lines:
-            if line.startswith("#"):
-                # remove #
-                textbox.insert("end", line[1:] + "\n", "heading_color")
-            else:
-                textbox.insert("end", line + "\n")
+        tab_buttons = {}
+        current_tab = ctk.StringVar(value="manual")
 
-        textbox.configure(state="disabled")
+        def switch_tab(tab_name):
+            current_tab.set(tab_name)
+            load_tab_content(tab_name)
 
+            # Update all button colors
+            for name, btn in tab_buttons.items():
+                if name == tab_name:
+                    btn.configure(
+                        fg_color=ACCENT_BLUE,
+                        hover_color=HOVER_BLUE,
+                        text_color=TEXT_COLOR_B,
+                    )
+                else:
+                    btn.configure(
+                        fg_color=ACCENT_DEEPBLUE,
+                        hover_color=HOVER_DEEPBLUE,
+                        text_color=TEXT_COLOR_W,
+                    )
+
+        def load_tab_content(tab_name):
+            textbox.configure(state="normal")
+            textbox.delete("1.0", "end")
+
+            # Get file path
+            base_path = (
+                sys._MEIPASS
+                if getattr(sys, "frozen", False)
+                else os.path.dirname(os.path.abspath(__file__))
+            )
+            file_name = next(tab[2] for tab in tabs if tab[1] == tab_name)
+            file_path = os.path.join(base_path, file_name)
+
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                if tab_name == "manual":
+                    # Parse headings for manual tab
+                    lines = content.split("\n")
+                    for line in lines:
+                        if line.startswith("#"):
+                            textbox.insert("end", line[1:] + "\n", "heading_color")
+                        else:
+                            textbox.insert("end", line + "\n")
+                else:
+                    textbox.insert("end", content)
+
+            except Exception as e:
+                textbox.insert("end", f"File not found: {file_path}\nError: {str(e)}")
+
+            textbox.configure(state="disabled")
+
+        # Create tab buttons
+        for tab_name, tab_id, _ in tabs:
+            btn = ctk.CTkButton(
+                tabs_frame,
+                text=tab_name,
+                command=lambda id=tab_id: switch_tab(id),
+                fg_color=ACCENT_DEEPBLUE,
+                hover_color=HOVER_DEEPBLUE,
+                text_color=TEXT_COLOR_W,
+                width=100,
+            )
+            btn.pack(side="left", padx=(0, 5))
+            tab_buttons[tab_id] = btn
+
+        # Close button
         close_btn = ctk.CTkButton(
-            text_frame,
+            content_frame,
             text="Close",
             command=on_close,
             fg_color=ACCENT_BLUE,
@@ -4538,6 +4602,9 @@ class VideoConverterApp:
             text_color=TEXT_COLOR_B,
         )
         close_btn.pack(pady=10)
+
+        # Show initial tab
+        switch_tab("manual")
 
     def _show_help_window(self, title, help_type):
         if self.open_help_windows.get(help_type, False):
