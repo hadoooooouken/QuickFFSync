@@ -1,0 +1,328 @@
+#ADVANCED ENCODER SETTINGS
+
+#Auto Button
+The Auto button automatically sets all encoder options to their "auto" values and disables all encoder flags.
+This lets FFmpeg use its default settings and intelligent algorithms to determine the optimal encoding parameters for your specific content.
+Useful when you want to leverage FFmpeg's built-in optimizations without manual configuration.
+
+#Default Button
+The Default button resets all encoder settings to their original default values (the same as when the application first starts).
+This provides a clean slate with balanced settings that work well for most common encoding scenarios, ensuring reliable performance and good quality output.
+
+#Async Depth
+auto, 1-16
+
+Controls the asynchronous pipeline depth for QSV encoding:
+auto = Automatic depth selection
+1-16 = Specific number of parallel operations
+
+Higher values can improve performance but increase memory usage.
+
+#Preset
+auto, veryslow, slower, slow, medium, fast, faster, veryfast
+
+Controls the encoding speed/quality tradeoff:
+auto = Automatic preset selection
+veryslow = Best quality (slowest)
+veryfast = Fastest encoding (lowest quality)
+
+Medium provides a good balance for most content.
+
+#Scenario
+auto, displayremoting, videoconference, archive, livestreaming, cameracapture, videosurveillance, gamestreaming, remotegaming
+
+Optimizes encoding for specific use cases:
+auto = Automatic scenario detection
+archive = High quality archival (default)
+livestreaming = Low latency for live streams
+videoconference = Optimized for video conferencing
+gamestreaming = Optimized for game streaming
+
+#Profile
+main, main10, mainsp, rext, scc (HEVC)
+baseline, main, high (H.264)
+main (AV1)
+profile0, profile1, profile2, profile3 (VP9)
+
+Defines feature set and compatibility level:
+main = Standard compatibility
+main10 = 10-bit color depth (HDR support)
+Higher profiles offer more features but may reduce device compatibility.
+
+#Tier
+auto, main, high (HEVC only)
+
+Controls the tier within a given level:
+Main Tier = Standard applications
+High Tier = Professional broadcasting (higher bitrates)
+
+#HW Accel
+auto, qsv
+
+Hardware acceleration method for Intel Quick Sync Video:
+auto = Automatic detection
+qsv = Intel Quick Sync Video acceleration
+
+#Rate-Control
+vbr, cbr
+
+Bitrate control method:
+vbr = Variable Bitrate (better quality, variable file size)
+cbr = Constant Bitrate (consistent bandwidth usage)
+
+#Intelligent Constant Quality (ICQ)
+Quality-based rate control (0-51, lower = better quality)
+
+Uses intelligent constant quality algorithm instead of bitrate targeting:
+0 = Highest quality (largest file size)
+51 = Lowest quality (smallest file size)
+Recommended: 18-30 for most content
+
+#Extended Control (extbrc)
+Enables extended rate control for improved quality.
+Better handles complex scenes but may increase encoding time.
+
+# LA Depth (look_ahead_depth)
+Depth of look ahead in number frames.
+Requires Extended Control to be enabled.
+
+#RD Optimization (rdo)
+Enables rate-distortion optimization.
+Improves compression efficiency by analyzing distortion vs bitrate tradeoffs.
+
+#MB level (mbbrc)
+Enables macroblock-level rate control.
+Provides finer control over bit allocation within frames.
+
+#FF Threads
+auto, 1-16
+
+Sets the number of threads used by FFmpeg for processing:
+auto = Automatic thread detection
+1-16 = Specific number of threads
+
+Higher values can improve performance on multi-core systems.
+
+#FPS AND SCALING SETTINGS
+
+#FPS Options
+source, 60, 50, 30, 23.976, custom
+
+Controls the output frame rate:
+source = Maintain original frame rate
+60 = 60 frames per second (smooth motion)
+50 = 50 frames per second (PAL regions)
+30 = 30 frames per second (standard video)
+23.976 = 24p cinematic look (24/1.001)
+custom = Manually specify any frame rate value
+
+#Video Format
+source, HD, FHD, QHD, 4K, custom
+
+Controls output resolution scaling:
+source = Maintain original resolution
+HD = 1280x720 (720p)
+FHD = 1920x1080 (1080p)
+QHD = 2560x1440 (1440p)
+4K = 3840x2160 (2160p)
+custom = Manually specify output width (height scales proportionally)
+
+#Interpolation Algorithm
+bilinear, bicubic, neighbor, area, lanczos, spline
+
+Selects the scaling algorithm for resolution changes:
+bilinear = Fast, low-quality scaling
+bicubic = Smooth and balanced quality (default)
+neighbor = Blocky, pixelated output (fastest)
+area = Soft result ideal for downscaling
+lanczos = Sharp and high-quality scaling
+spline = Visually best in theory (slowest)
+
+#AUDIO SETTINGS
+
+#Audio Options
+disable, source, AAC 96k, AAC 160k, AAC 256k, custom
+
+Controls audio processing and encoding:
+disable = Remove audio track completely
+source = Copy original audio without re-encoding (fastest)
+AAC 96k = Encode to AAC at 96 kbps (small file size)
+AAC 160k = Encode to AAC at 160 kbps (good balance)
+AAC 256k = Encode to AAC at 256 kbps (high quality)
+custom = Manually specify bitrate in kbps
+
+#Audio Bitrate Quality Guide
+96k = Acceptable quality for speech podcasts
+160k = Good quality for music and general content
+256k = High quality, transparent for most listeners
+320k = Maximum AAC quality (near transparent)
+
+#ADDITIONAL OPTIONS BUTTONS
+
+#Speed up X2
+setpts=0.5*PTS
+
+Doubles video playback speed (2x faster) by modifying presentation timestamps.
+Values <1.0 speed up, >1.0 slow down.
+
+atempo=2.0
+Doubles audio playback speed (2x faster) without changing pitch.
+
+#Slow down X2
+setpts=2.0*PTS
+
+Halves video playback speed (2x slower).
+
+atempo=0.5
+Halves audio playback speed (2x slower).
+
+#Sharpness
+unsharp=5:5:1.15:3:3:0.0
+
+Enhances image sharpness using unsharp mask.
+Format: luma_msize_x:luma_msize_y:luma_amount:chroma_msize_x:chroma_msize_y:chroma_amount.
+Higher values increase sharpness but may produce halos.
+
+#Saturation
+eq=saturation=1.15
+
+Adjusts saturation.
+1.0 = original, >1.0 = more saturated, <1.0 = desaturated.
+Range: 0.0–3.0.
+
+#Denoise
+hqdn3d=2:1.5:3:2.25
+
+High-quality temporal + spatial denoise filter.
+Format: luma_spatial:chroma_spatial:luma_tmp:chroma_tmp.
+Optional: increase temporal params for very noisy video.
+
+luma_spatial
+    A non-negative floating point number which specifies spatial luma strength.
+chroma_spatial
+    A non-negative floating point number which specifies spatial chroma strength.
+luma_tmp
+    A floating point number which specifies luma temporal strength.
+chroma_tmp
+    A floating point number which specifies chroma temporal strength.
+
+#FPS Pass
+fps_mode passthrough
+
+Preserve original frame timestamps and pacing.
+Useful when you want to maintain the original variable frame rate characteristics.
+
+#Drop thresh
+frame_drop_threshold 0.5
+
+Determines how aggressively frames may be dropped to maintain quality.
+Range: 0–1; higher = more likely to drop frames.
+
+#Gamma RGB
+eq=gamma_r=1.0:gamma_g=1.0:gamma_b=1.0:gamma_weight=1.0
+
+Adjust gamma correction for each color channel separately.
+Values >1.0 make image brighter, <1.0 make image darker.
+
+#Brightness
+eq=brightness=-0.15
+
+Adjust brightness of the video.
+Values range from -1.0 to 1.0. Negative values darken, positive values brighten.
+
+#Audio fix
+loudnorm=I=-16:TP=-1.5:LRA=11
+
+Normalize audio loudness using EBU R128 standards.
+
+I: Integrated loudness target (-16 to -24 LUFS)
+TP: True peak maximum (-1.5 to -9.0 dBTP)
+LRA: Loudness range (1.0 to 20.0 LU)
+
+#Force 8 bit
+pix_fmt:v nv12
+
+Force 8-bit color depth with NV12 pixel format.
+
+#Force 10 bit
+pix_fmt:v p010le
+
+Force 10-bit color depth with P010LE pixel format.
+Better for HDR content and reduces banding, but less compatible.
+
+#HDR to SDR
+zscale=transfer=linear:npl=100,tonemap=tonemap=hable:desat=0,zscale=transfer=bt709:matrix=bt709:primaries=bt709
+
+Convert HDR content to SDR using tonemapping.
+
+The three-stage process:
+1. Convert to linear light with specified peak luminance (npl)
+2. Apply Hable tonemapping algorithm with zero desaturation (desat=0)
+3. Convert to BT.709 color space for proper SDR compatibility
+
+This maintains color accuracy and prevents the muted/muddy colors typical of poor HDR conversions.
+
+#Crop to 16:9
+crop=iw:min(ih\,iw*9/16):0:(ih-min(ih\,iw*9/16))/2
+
+Crops video to 16:9 by trimming vertical edges only, keeping full original width.
+
+#Rotate
+transpose=1
+
+Rotate video 90 degrees clockwise.
+
+The transpose filter accepts the values from 0-3:
+    0 = 90° counter-clockwise and vertical flip
+    1 = 90° clockwise
+    2 = 90° counter-clockwise
+    3 = 90° clockwise and vertical flip
+
+#Trim Slider
+Visual timeline for setting trim points with thumbnail preview.
+Drag handles to set start and end times accurately.
+
+#Copy Checkbox
+The Copy checkbox enables stream copy mode for trimming operations.
+When enabled, the video and audio streams are copied directly without re-encoding,
+making the trimming process extremely fast and completely lossless.
+This is ideal for simple cutting operations where you don't need to change the video quality or format.
+
+#Precise Checkbox
+The Precise checkbox enables accurate frame-by-frame trimming.
+When enabled, FFmpeg uses more precise seeking methods to ensure the trim points land exactly on the specified frames.
+This is slightly slower but guarantees frame-accurate cutting, which is essential for professional editing work or when precise timing is critical.
+Usable for stream copy mode (eliminates freezing at the beginning of the video).
+
+#Custom Command Editor
+Enables direct editing of the FFmpeg command line.
+Useful for advanced users who need specific parameters.
+
+#Playback Controls
+Play Input File = Opens original file in system default player
+Play 10s Preview = Creates and opens 10-second encoded preview
+Play Output File = Opens converted file in system player
+
+#INTEL QUICK SYNC SPECIFIC FEATURES
+
+#Codec Support
+HEVC (H.265), H.264, AV1, VP9
+
+Intel Quick Sync Video supports multiple modern codecs:
+HEVC = High Efficiency Video Coding (best compression)
+H.264 = Widely compatible standard
+AV1 = Royalty-free modern codec
+VP9 = Google's open video format
+
+#Hardware Requirements
+Requires Intel CPU with integrated graphics (6th gen or newer)
+Different generations support different codecs:
+- 6th-10th gen: H.264, HEVC 8-bit
+- 11th gen+: HEVC 10-bit, AV1 decoding
+- 12th gen+: AV1 encoding
+
+#Quality Tips
+- Use ICQ mode for consistent quality across different content
+- Higher async depth values help with 4K content
+- "archive" scenario works best for high-quality recordings
+- Enable extended BRC for complex scenes with rapid motion
