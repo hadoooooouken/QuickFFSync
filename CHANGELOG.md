@@ -1,5 +1,9 @@
 # QuickFFSync - Changelog
 
+## [1.0.7] - 2025-10-11
+- Fixed saving of manually selected extensions (MKV, MOV);
+- Build with Python: 3.13.8 + Nuitka 2.9rc1.
+
 ## [1.0.6] - 2025-10-09
 - Fixed active ICQ checkbox with VP9;
 - Added "About" info tab;

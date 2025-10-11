@@ -1,4 +1,4 @@
-QuickFFSync 1.0.6
+QuickFFSync 1.0.7
 
 Video converter and trimming tool powered by Intel Quick Sync Video acceleration.
 
