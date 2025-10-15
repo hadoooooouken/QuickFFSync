@@ -101,8 +101,8 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=qff-about.txt=./qff-about.txt ^
       --include-data-file=qff-license.txt=./qff-license.txt ^
       --product-name="QuickFFSync" ^
-      --product-version="1.0.7" ^
-      --file-version="1.0.7" ^
+      --product-version="1.0.8" ^
+      --file-version="1.0.8" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
       --copyright="Copyright (C) 2025 hadouken" ^
