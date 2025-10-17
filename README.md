@@ -35,6 +35,8 @@ It provides a simple dark-themed interface with drag-and-drop support, presets, 
 - **Built-in player buttons:** Play Input, Play Preview, Play Output
 - **Command preview** – shows full FFmpeg command, editable, copyable
 - **Real-time progress tracking** during conversion
+- **Batch Conversion:** Process multiple video files in one go with the same settings - perfect for converting entire folders of videos.
+- **Screen Recording:** Record your screen directly with Quick Sync encoding - choose frame rate and quality settings.
 
 ![qff-mainwindow_start](screenshots/qff-mainwindow_settings.png)
 
