@@ -14,6 +14,7 @@ from tkinter import filedialog, messagebox
 from winsound import MB_ICONASTERISK, MessageBeep
 
 import customtkinter as ctk
+import win32clipboard
 from PIL import Image
 from win32api import DragFinish, DragQueryFile
 from win32con import GWL_WNDPROC, WM_DROPFILES
@@ -536,7 +537,7 @@ class VideoConverterApp:
         self.batch_files = []
         self.video_metadata_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.0.8")
+        master.title("QuickFFSync 1.0.9")
         master.geometry("800x700")
         master.minsize(800, 700)
         master.maxsize(800, 900)
@@ -2057,7 +2058,7 @@ class VideoConverterApp:
             f"ddagrab=0:framerate={fps},hwmap=mode=direct:derive_device=qsv,format=qsv",
         ]
 
-        # Add encoder settings - only h264 works now
+        # Encoder settings - only h264 works now
         """
         codec_map = {
             "hevc": "hevc_qsv",
@@ -2069,7 +2070,11 @@ class VideoConverterApp:
         """
         command.extend(["-c:v", "h264_qsv"])
 
-        # Add quality settings
+        # Preset settings
+        if self.preset.get() != "auto":
+            command.extend(["-preset:v", self.preset.get()])
+
+        # Quality settings
         if self.icq_mode.get():
             command.extend(["-global_quality:v", self.global_quality_level.get()])
         else:
@@ -2077,6 +2082,10 @@ class VideoConverterApp:
 
         # No audio
         command.extend(["-fps_mode", "cfr", "-an", output_file])
+
+        # PRINT THE COMMAND TO CONSOLE
+        print("Screen recording command:")
+        print(" ".join(command))
 
         try:
             # Update UI first
@@ -2728,7 +2737,7 @@ class VideoConverterApp:
                 "custom_fps": self.custom_fps.get(),
                 "video_format_option": self.video_format_option.get(),
                 "custom_video_width": self.custom_video_width.get(),
-                "version": "1.0.8",
+                "version": "1.0.9",
             }
 
             with open(settings_file, "w", encoding="utf-8") as file:
@@ -4882,7 +4891,6 @@ class VideoConverterApp:
 
     def _copy_text(self):
         widget = self.master.focus_get()
-        self.master.clipboard_clear()
 
         try:
             if isinstance(widget, (ctk.CTkTextbox, tk.Text)):
@@ -4916,7 +4924,13 @@ class VideoConverterApp:
             print(f"Error copying text: {e}")
             text = ""
 
-        self.master.clipboard_append(text)
+        try:
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+        except Exception as e:
+            print(f"Error setting clipboard: {e}")
 
     def _paste_text(self):
         widget = self.master.focus_get()
@@ -4979,12 +4993,19 @@ class VideoConverterApp:
                     i += 1
 
             command_with_quotes = " ".join(quoted_parts)
-            self.master.clipboard_clear()
-            self.master.clipboard_append(command_with_quotes)
+
+            try:
+                win32clipboard.OpenClipboard()
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardText(
+                    command_with_quotes, win32clipboard.CF_UNICODETEXT
+                )
+                win32clipboard.CloseClipboard()
+            except Exception as e:
+                print(f"Error setting clipboard: {e}")
 
         except Exception:
             # Fallback: simple regex-based quoting for file paths
-
             command_with_quotes = sub(
                 r'(-i\s+)([^"\s]+)',
                 r'\1"\2"',
@@ -4995,9 +5016,16 @@ class VideoConverterApp:
                 r'\1"\2"\3',
                 command_with_quotes,  # Quote output files
             )
-            self.master.clipboard_clear()
-            self.master.clipboard_append(command_with_quotes)
-            messagebox.showinfo("Copied", "Command copied to clipboard!")
+
+            try:
+                win32clipboard.OpenClipboard()
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardText(
+                    command_with_quotes, win32clipboard.CF_UNICODETEXT
+                )
+                win32clipboard.CloseClipboard()
+            except Exception as e:
+                print(f"Error setting clipboard: {e}")
 
     def _apply_command_changes(self, window):
         new_command = self.command_textbox.get("1.0", "end-1c").strip()
