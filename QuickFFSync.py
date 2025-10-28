@@ -537,7 +537,7 @@ class VideoConverterApp:
         self.batch_files = []
         self.video_metadata_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.1.0")
+        master.title("QuickFFSync 1.1.1")
         master.geometry("800x700")
         master.minsize(800, 700)
         master.maxsize(800, 900)
@@ -738,6 +738,10 @@ class VideoConverterApp:
         self.recording_process = None
         # Preview 10s
         self.preview_process = None
+        # Saved custom filters
+        self.saved_additional_options = ctk.StringVar(value="")
+        self.saved_additional_filter_options = ctk.StringVar(value="")
+        self.saved_additional_audio_filter_options = ctk.StringVar(value="")
 
     def _create_widgets(self):
         # Build the entire GUI interface
@@ -1530,7 +1534,6 @@ class VideoConverterApp:
         self.additional_options_entry = ctk.CTkEntry(
             self.additional_options_frame,
             textvariable=self.additional_options,
-            width=450,
             fg_color=SECONDARY_BG,
             text_color=TEXT_COLOR_W,
             border_color=HOVER_BLUE,
@@ -1561,7 +1564,6 @@ class VideoConverterApp:
         self.additional_filter_options_entry = ctk.CTkEntry(
             self.additional_options_frame,
             textvariable=self.additional_filter_options,
-            width=450,
             fg_color=SECONDARY_BG,
             text_color=TEXT_COLOR_W,
             border_color=HOVER_BLUE,
@@ -1596,7 +1598,6 @@ class VideoConverterApp:
         self.additional_audio_filter_options_entry = ctk.CTkEntry(
             self.additional_options_frame,
             textvariable=self.additional_audio_filter_options,
-            width=450,
             fg_color=SECONDARY_BG,
             text_color=TEXT_COLOR_W,
             border_color=HOVER_BLUE,
@@ -1624,6 +1625,7 @@ class VideoConverterApp:
         quick_buttons_frame.grid(
             row=5, column=0, columnspan=3, sticky="w", padx=10, pady=(0, 10)
         )
+        self.additional_options_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkButton(
             quick_buttons_frame,
@@ -1632,7 +1634,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         ctk.CTkButton(
@@ -1642,7 +1644,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Sharpness button
@@ -1653,7 +1655,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Saturation button
@@ -1664,7 +1666,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Denoise button
@@ -1675,7 +1677,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Reset button
@@ -1686,7 +1688,7 @@ class VideoConverterApp:
             fg_color=ACCENT_RED,
             hover_color=HOVER_RED,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left")
 
         quick_buttons_frame_2 = ctk.CTkFrame(
@@ -1706,7 +1708,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Frame drop threshold button
@@ -1717,7 +1719,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Gamma RGB
@@ -1730,7 +1732,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Brightness button
@@ -1741,7 +1743,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Audio fix button
@@ -1752,7 +1754,18 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
+        ).pack(side="left", padx=(0, 10))
+
+        # Save custom
+        ctk.CTkButton(
+            quick_buttons_frame_2,
+            text="Save",
+            command=self._save_custom_filters,
+            fg_color=ACCENT_DEEPBLUE,
+            hover_color=HOVER_DEEPBLUE,
+            text_color=TEXT_COLOR_W,
+            width=106,
         ).pack(side="left")
 
         quick_buttons_frame_3 = ctk.CTkFrame(
@@ -1770,7 +1783,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Force 10bit button
@@ -1781,7 +1794,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # HDR to SDR button
@@ -1796,7 +1809,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Crop to 16:9
@@ -1809,7 +1822,7 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
         ).pack(side="left", padx=(0, 10))
 
         # Rotate / transponse
@@ -1820,7 +1833,18 @@ class VideoConverterApp:
             fg_color=ACCENT_BLUE,
             hover_color=HOVER_BLUE,
             text_color=TEXT_COLOR_B,
-            width=100,
+            width=106,
+        ).pack(side="left", padx=(0, 10))
+
+        # Load custom
+        ctk.CTkButton(
+            quick_buttons_frame_3,
+            text="Load",
+            command=self._load_custom_filters,
+            fg_color=ACCENT_DEEPBLUE,
+            hover_color=HOVER_DEEPBLUE,
+            text_color=TEXT_COLOR_W,
+            width=106,
         ).pack(side="left")
 
         # Presets Section
@@ -2762,10 +2786,102 @@ class VideoConverterApp:
                 if encoder_extbrc is not None:
                     self.extbrc.set(encoder_extbrc)
 
+                # Load saved custom filters
+                saved_additional_options = settings.get("saved_additional_options", "")
+                if saved_additional_options:
+                    self.saved_additional_options.set(saved_additional_options)
+
+                saved_additional_filter_options = settings.get(
+                    "saved_additional_filter_options", ""
+                )
+                if saved_additional_filter_options:
+                    self.saved_additional_filter_options.set(
+                        saved_additional_filter_options
+                    )
+
+                saved_additional_audio_filter_options = settings.get(
+                    "saved_additional_audio_filter_options", ""
+                )
+                if saved_additional_audio_filter_options:
+                    self.saved_additional_audio_filter_options.set(
+                        saved_additional_audio_filter_options
+                    )
+
                 return ffmpeg_path
         except Exception as e:
             print(f"Error loading settings: {e}")
         return None
+
+    def _save_custom_filters(self):
+        current_options = self.additional_options.get().strip()
+        current_filter_options = self.additional_filter_options.get().strip()
+        current_audio_filter_options = (
+            self.additional_audio_filter_options.get().strip()
+        )
+
+        if current_options == self.additional_options_placeholder:
+            self.saved_additional_options.set("")
+        else:
+            self.saved_additional_options.set(current_options)
+
+        if current_filter_options == self.additional_filter_options_placeholder:
+            self.saved_additional_filter_options.set("")
+        else:
+            self.saved_additional_filter_options.set(current_filter_options)
+
+        if (
+            current_audio_filter_options
+            == self.additional_audio_filter_options_placeholder
+        ):
+            self.saved_additional_audio_filter_options.set("")
+        else:
+            self.saved_additional_audio_filter_options.set(current_audio_filter_options)
+
+        self._save_settings()
+        messagebox.showinfo("Saved", "Custom filters saved!")
+
+    def _load_custom_filters(self):
+        saved_options = self.saved_additional_options.get()
+        saved_filter_options = self.saved_additional_filter_options.get()
+        saved_audio_filter_options = self.saved_additional_audio_filter_options.get()
+
+        if not any([saved_options, saved_filter_options, saved_audio_filter_options]):
+            messagebox.showinfo("Info", "No saved filters found.")
+            return
+
+        if saved_options is not None:
+            if saved_options:
+                self.additional_options.set(saved_options)
+                self.additional_options_entry.configure(text_color=TEXT_COLOR_W)
+            else:
+                self.additional_options.set(self.additional_options_placeholder)
+                self.additional_options_entry.configure(text_color=PLACEHOLDER_COLOR)
+
+        if saved_filter_options is not None:
+            if saved_filter_options:
+                self.additional_filter_options.set(saved_filter_options)
+                self.additional_filter_options_entry.configure(text_color=TEXT_COLOR_W)
+            else:
+                self.additional_filter_options.set(
+                    self.additional_filter_options_placeholder
+                )
+                self.additional_filter_options_entry.configure(
+                    text_color=PLACEHOLDER_COLOR
+                )
+
+        if saved_audio_filter_options is not None:
+            if saved_audio_filter_options:
+                self.additional_audio_filter_options.set(saved_audio_filter_options)
+                self.additional_audio_filter_options_entry.configure(
+                    text_color=TEXT_COLOR_W
+                )
+            else:
+                self.additional_audio_filter_options.set(
+                    self.additional_audio_filter_options_placeholder
+                )
+                self.additional_audio_filter_options_entry.configure(
+                    text_color=PLACEHOLDER_COLOR
+                )
 
     def _save_settings(self):
         """Save all settings to JSON file"""
@@ -2805,7 +2921,11 @@ class VideoConverterApp:
                 "fps_mode": self.fps_mode.get(),
                 "video_format_option": self.video_format_option.get(),
                 "custom_video_width": self.custom_video_width.get(),
-                "version": "1.1.0",
+                # Saved custom filters
+                "saved_additional_options": self.saved_additional_options.get(),
+                "saved_additional_filter_options": self.saved_additional_filter_options.get(),
+                "saved_additional_audio_filter_options": self.saved_additional_audio_filter_options.get(),
+                "version": "1.1.1",
             }
 
             with open(settings_file, "w", encoding="utf-8") as file:
@@ -3781,7 +3901,7 @@ class VideoConverterApp:
                 fg_color=ACCENT_DEEPBLUE,
                 hover_color=HOVER_DEEPBLUE,
                 text_color=TEXT_COLOR_W,
-                width=100,
+                width=106,
             ).pack(side="right", padx=5)
 
         except Exception as e:
@@ -4515,30 +4635,6 @@ class VideoConverterApp:
             self.video_format_option.set("source")
             self.custom_video_width.set("1920")
             self.interpolation_algo.set("bicubic")
-
-            # Clear additional options
-            self.additional_options.set("")
-            self.additional_filter_options.set("")
-            self.additional_audio_filter_options.set("")
-
-            # Reset entry placeholders
-            self.additional_options_entry.delete(0, "end")
-            self.additional_options_entry.insert(0, self.additional_options_placeholder)
-            self.additional_options_entry.configure(text_color=PLACEHOLDER_COLOR)
-
-            self.additional_filter_options_entry.delete(0, "end")
-            self.additional_filter_options_entry.insert(
-                0, self.additional_filter_options_placeholder
-            )
-            self.additional_filter_options_entry.configure(text_color=PLACEHOLDER_COLOR)
-
-            self.additional_audio_filter_options_entry.delete(0, "end")
-            self.additional_audio_filter_options_entry.insert(
-                0, self.additional_audio_filter_options_placeholder
-            )
-            self.additional_audio_filter_options_entry.configure(
-                text_color=PLACEHOLDER_COLOR
-            )
 
             self.preset_indicator.configure(
                 text="Default settings applied", text_color=ACCENT_BLUE
@@ -5438,7 +5534,7 @@ class VideoConverterApp:
                 fg_color=ACCENT_DEEPBLUE,
                 hover_color=HOVER_DEEPBLUE,
                 text_color=TEXT_COLOR_W,
-                width=100,
+                width=106,
             )
             btn.pack(side="left", padx=(0, 5))
             tab_buttons[tab_id] = btn

@@ -1,5 +1,9 @@
 # QuickFFSync - Changelog
 
+## [1.1.1] - 2025-10-28
+- Additional Options: Added "Save/Load" buttons for custom filter settings;
+- UI fixes.
+
 ## [1.1.0] - 2025-10-25
 - Added "FPS Mode";
 - Added "Cancel" for "Play 10s Preview" button;
