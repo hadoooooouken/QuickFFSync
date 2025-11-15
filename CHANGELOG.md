@@ -1,5 +1,8 @@
 # QuickFFSync - Changelog
 
+## [1.1.2] - 2025-11-15
+- UI/UX fixes and updates.
+
 ## [1.1.1] - 2025-10-28
 - Additional Options: Added "Save/Load" buttons for custom filter settings;
 - UI fixes.
