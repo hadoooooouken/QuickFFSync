@@ -1,5 +1,8 @@
 # QuickFFSync - Changelog
 
+## [1.1.3] - 2026-01-02
+- UI/UX fixes.
+
 ## [1.1.2] - 2025-11-15
 - UI/UX fixes and updates.
 

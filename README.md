@@ -103,11 +103,11 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=qff-about.txt=./qff-about.txt ^
       --include-data-file=qff-license.txt=./qff-license.txt ^
       --product-name="QuickFFSync" ^
-      --product-version="1.1.2" ^
-      --file-version="1.1.2" ^
+      --product-version="1.1.3" ^
+      --file-version="1.1.3" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
-      --copyright="Copyright (C) 2025 hadouken" ^
+      --copyright="Copyright (C) 2026 hadouken" ^
       --output-dir=build "QuickFFSync.py"
     ```
   The compiled executable will be found in the `build` directory specified by `--output-dir`.
@@ -159,7 +159,7 @@ If you have a suggestion that would make this better, you can simply open an iss
 
 QuickFFSync is licensed under the MIT License — Modified for QuickFFSync.
 
-© 2025 hadouken (GitLab) / hadoooooouken (GitHub)
+© 2026 hadouken (GitLab) / hadoooooouken (GitHub)
 
 You are free to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of this software, **provided that**:
