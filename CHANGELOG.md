@@ -1,5 +1,10 @@
 # QuickFFSync - Changelog
 
+## [1.1.4] - 2026-01-07
+- HighDPI support;
+- FFmpeg Command Preview: fixed "Copy to Clipboard";
+- FFmpeg Command Preview: fixed "Apply Changes".
+
 ## [1.1.3] - 2026-01-02
 - UI/UX fixes.
 

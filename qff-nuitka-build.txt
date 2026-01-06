@@ -6,9 +6,10 @@ python -m nuitka --msvc=latest --lto=yes ^
 --include-data-file=qff-help.txt=./qff-help.txt ^
 --include-data-file=qff-about.txt=./qff-about.txt ^
 --include-data-file=qff-license.txt=./qff-license.txt ^
+--include-data-file=nff-license.txt=./LICENSE.txt ^
 --product-name="QuickFFSync" ^
---product-version="1.1.3" ^
---file-version="1.1.3" ^
+--product-version="1.1.4" ^
+--file-version="1.1.4" ^
 --file-description="QuickFFSync" ^
 --company-name="Deepseek Enjoyer" ^
 --copyright="Copyright (C) 2026 hadouken" ^
