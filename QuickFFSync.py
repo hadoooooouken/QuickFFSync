@@ -11,7 +11,7 @@ from json import dump, load
 from re import sub
 from shlex import split
 from threading import Thread, Timer
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from winsound import MB_ICONASTERISK, MessageBeep
 
 import customtkinter as ctk
@@ -22,6 +22,14 @@ from win32con import GWL_WNDPROC, WM_DROPFILES
 from win32gui import CallWindowProc, DragAcceptFiles, SetWindowLong
 
 
+def get_icon_path():
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, "qff.ico")
+
+
 def get_real_dpi():
     """Get the actual DPI taking system scaling into account"""
     user32 = ctypes.windll.user32
@@ -30,10 +38,10 @@ def get_real_dpi():
     try:
         awareness = ctypes.c_int(2)
         user32.SetProcessDpiAwarenessContext(awareness)
-    except:
+    except Exception:
         try:
             shcore.SetProcessDpiAwareness(2)
-        except:
+        except Exception:
             user32.SetProcessDPIAware()
 
     try:
@@ -41,12 +49,25 @@ def get_real_dpi():
         dpi = user32.GetDpiForWindow(hwnd)
         if dpi == 0:
             dpi = user32.GetDpiForSystem()
-    except:
+    except Exception:
         hdc = user32.GetDC(0)
         dpi = user32.GetDeviceCaps(hdc, 88)
         user32.ReleaseDC(0, hdc)
 
     return dpi
+
+
+def is_us_english_layout():
+    """Return True if the current keyboard layout is US English (0x0409)."""
+    try:
+        user32 = ctypes.windll.user32
+        # Get keyboard layout for the current thread
+        hkl = user32.GetKeyboardLayout(0)
+        # Language ID is the low 16 bits
+        lang_id = hkl & 0xFFFF
+        return lang_id == 0x0409  # 0x0409 = US English
+    except Exception:
+        return False  # On error, assume not English (or fall back to default)
 
 
 # UI THEME
@@ -638,7 +659,7 @@ class VideoConverterApp:
         self.batch_files = []
         self.video_metadata_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.1.4")
+        master.title("QuickFFSync 1.1.5")
 
         dpi = get_real_dpi()
         scaling = int(round((dpi / 96) * 100))
@@ -675,6 +696,13 @@ class VideoConverterApp:
         self.button_frame = ctk.CTkFrame(master, fg_color=PRIMARY_BG)
         self.button_frame.pack(fill="x", padx=15, pady=(0, 15))
 
+        # Create presets directory
+        self.presets_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "presets"
+        )
+        if not os.path.exists(self.presets_dir):
+            os.makedirs(self.presets_dir)
+
         self._setup_variables()
         self._create_widgets()
 
@@ -682,19 +710,34 @@ class VideoConverterApp:
         self.ffmpeg_path = self._find_executable("ffmpeg.exe")
         self.ffprobe_path = None
 
-        # Try to load saved settings
-        saved_path = self._load_settings()
-        if saved_path:
-            self.ffmpeg_path = saved_path
+        # Load saved settings (updates ffmpeg_custom_path)
+        self._load_settings()
+
+        # Determine the actual ffmpeg path to use
+        custom_ffmpeg = self.ffmpeg_custom_path.get()
+        if (
+            custom_ffmpeg
+            and custom_ffmpeg != self.ffmpeg_path_placeholder
+            and os.path.exists(custom_ffmpeg)
+        ):
+            actual_ffmpeg = custom_ffmpeg
         else:
-            if self.ffmpeg_path:
-                ffprobe_path = os.path.join(
-                    os.path.dirname(self.ffmpeg_path), "ffprobe.exe"
-                )
-                if os.path.exists(ffprobe_path):
-                    self.ffprobe_path = ffprobe_path
-                else:
-                    self.ffprobe_path = self._find_executable("ffprobe.exe")
+            actual_ffmpeg = self.ffmpeg_path
+
+        # Update self.ffmpeg_path to the actual one (so it's consistent)
+        self.ffmpeg_path = actual_ffmpeg
+
+        # Determine ffprobe path based on actual ffmpeg
+        if self.ffmpeg_path:
+            ffprobe_path = os.path.join(
+                os.path.dirname(self.ffmpeg_path), "ffprobe.exe"
+            )
+            if os.path.exists(ffprobe_path):
+                self.ffprobe_path = ffprobe_path
+            else:
+                self.ffprobe_path = self._find_executable("ffprobe.exe")
+        else:
+            self.ffprobe_path = self._find_executable("ffprobe.exe")
 
         self._update_codec_settings()
 
@@ -749,20 +792,21 @@ class VideoConverterApp:
         self._toggle_icq_mode()  # Enabled ICQ by default
 
         # Encoder Settings
-        self.threads.trace_add("write", lambda *args: self._on_setting_changed())
         self.async_depth.trace_add("write", lambda *args: self._on_setting_changed())
         self.preset.trace_add("write", lambda *args: self._on_setting_changed())
-        self.scenario.trace_add("write", lambda *args: self._on_setting_changed())
         self.profile.trace_add("write", lambda *args: self._on_setting_changed())
-        self.tier.trace_add("write", lambda *args: self._on_setting_changed())
+        self.scenario.trace_add("write", lambda *args: self._on_setting_changed())
+        self.threads.trace_add("write", lambda *args: self._on_setting_changed())
         self.hwaccel.trace_add("write", lambda *args: self._on_setting_changed())
-        self.rdo.trace_add("write", lambda *args: self._on_setting_changed())
-        self.mbbrc.trace_add("write", lambda *args: self._on_setting_changed())
-        self.extbrc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.rc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.tier.trace_add("write", lambda *args: self._on_setting_changed())
         self.look_ahead_depth.trace_add(
             "write", lambda *args: self._on_setting_changed()
         )
-        self.rc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.extbrc.trace_add("write", lambda *args: self._on_setting_changed())
+        self.rdo.trace_add("write", lambda *args: self._on_setting_changed())
+        self.mbbrc.trace_add("write", lambda *args: self._on_setting_changed())
+
         self.custom_abitrate.trace_add(
             "write", lambda *args: self._on_setting_changed()
         )
@@ -857,6 +901,10 @@ class VideoConverterApp:
         self.saved_additional_options = ctk.StringVar(value="")
         self.saved_additional_filter_options = ctk.StringVar(value="")
         self.saved_additional_audio_filter_options = ctk.StringVar(value="")
+        # Custom presets
+        self.custom_preset_name = ctk.StringVar(value="")
+        self.custom_preset_selected = ctk.StringVar(value="")
+        self.loading_preset = False
 
     def _create_widgets(self):
         # Build the entire GUI interface
@@ -1984,12 +2032,80 @@ class VideoConverterApp:
             )
             rb.grid(row=1, column=i, padx=10, pady=5, sticky="w")
 
+        custom_row_frame = ctk.CTkFrame(self.presets_frame, fg_color="transparent")
+        custom_row_frame.grid(
+            row=2, column=0, columnspan=5, sticky="ew", padx=0, pady=5
+        )
+
+        # Custom Radio Button
+        self.custom_preset_rb = ctk.CTkRadioButton(
+            custom_row_frame,
+            text="Custom",
+            variable=self.selected_preset,
+            value="custom",
+            command=self._on_custom_preset_selected,
+            fg_color=ACCENT_BLUE,
+            hover_color=HOVER_BLUE,
+        )
+        self.custom_preset_rb.pack(side="left", padx=(10, 5))
+
+        # Preset Label
+        ctk.CTkLabel(custom_row_frame, text="Preset:").pack(side="left", padx=(30, 5))
+
+        # Preset dropdown
+        self.custom_preset_dropdown = ctk.CTkOptionMenu(
+            custom_row_frame,
+            variable=self.custom_preset_name,
+            values=self._get_preset_list(),
+            command=self._load_custom_preset,
+            fg_color=PRIMARY_BG,
+            button_color=ACCENT_BLUE,
+            button_hover_color=HOVER_BLUE,
+            dropdown_fg_color=SECONDARY_BG,
+            dropdown_hover_color=HOVER_BLUE,
+            width=170,
+        )
+        self.custom_preset_dropdown.pack(side="left", padx=5)
+
+        self.save_as_preset_btn = ctk.CTkButton(
+            custom_row_frame,
+            text="Save As",
+            command=self._save_preset_as,
+            fg_color=ACCENT_BLUE,
+            hover_color=HOVER_BLUE,
+            text_color=TEXT_COLOR_B,
+            width=70,
+        )
+        self.save_as_preset_btn.pack(side="left", padx=(15, 5))
+
+        self.save_preset_btn = ctk.CTkButton(
+            custom_row_frame,
+            text="Save",
+            command=self._save_preset,
+            fg_color=ACCENT_BLUE,
+            hover_color=HOVER_BLUE,
+            text_color=TEXT_COLOR_B,
+            width=60,
+        )
+        self.save_preset_btn.pack(side="left", padx=5)
+
+        self.delete_preset_btn = ctk.CTkButton(
+            custom_row_frame,
+            text="Delete",
+            command=self._delete_preset,
+            fg_color=ACCENT_RED,
+            hover_color=HOVER_RED,
+            text_color=TEXT_COLOR_B,
+            width=60,
+        )
+        self.delete_preset_btn.pack(side="left", padx=5)
+
         # Preset Indicator
         self.preset_indicator = ctk.CTkLabel(
             self.presets_frame, text="No preset selected", text_color=PLACEHOLDER_COLOR
         )
         self.preset_indicator.grid(
-            row=3, column=0, columnspan=2, padx=10, pady=5, sticky="w"
+            row=3, column=0, columnspan=6, padx=10, pady=5, sticky="w"
         )
 
         ctk.CTkLabel(main_frame, textvariable=self.estimated_file_size).grid(
@@ -2109,6 +2225,451 @@ class VideoConverterApp:
         self.progress_value.set(0.0)
         self.auto_button.grid_remove()
         self.default_button.grid_remove()
+
+    # CUSTOM PRESET METHODS
+    def _get_preset_list(self):
+        """Get list of saved presets"""
+        try:
+            files = os.listdir(self.presets_dir)
+            presets = [os.path.splitext(f)[0] for f in files if f.endswith(".json")]
+            return presets
+        except Exception:
+            return []
+
+    def _update_preset_dropdown(self):
+        """Update the preset dropdown list"""
+        presets = self._get_preset_list()
+        self.custom_preset_dropdown.configure(values=presets)
+
+    def _on_custom_preset_selected(self):
+        """Handle selection of custom preset radio button"""
+        if self.selected_preset.get() == "custom":
+            preset_name = self.custom_preset_name.get()
+            if preset_name:
+                self.custom_preset_selected.set(preset_name)
+                self._load_custom_preset(preset_name)
+
+    def _load_custom_preset(self, preset_name):
+        """Load a custom preset"""
+        try:
+            preset_file = os.path.join(self.presets_dir, f"{preset_name}.json")
+            if os.path.exists(preset_file):
+                with open(preset_file, "r", encoding="utf-8") as file:
+                    settings = load(file)
+
+                self.loading_preset = True
+                self._apply_settings_dict(settings)
+                self.custom_preset_name.set(preset_name)
+                self.custom_preset_selected.set(preset_name)
+                self.loading_preset = False
+
+                self.custom_preset_selected.set(preset_name)
+                if self.selected_preset.get() != "custom":
+                    self.selected_preset.set("custom")
+                self.preset_indicator.configure(
+                    text=f"Loaded preset: {preset_name}", text_color=ACCENT_BLUE
+                )
+                self._save_settings()
+            else:
+                messagebox.showerror("Error", f"Preset file not found: {preset_file}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load preset: {str(e)}")
+
+    def _save_preset_as(self):
+        """Save current settings as a new preset"""
+        preset_name = simpledialog.askstring("Save Preset", "Enter preset name:")
+        if not preset_name:
+            return
+
+        # Check if preset already exists
+        preset_file = os.path.join(self.presets_dir, f"{preset_name}.json")
+        if os.path.exists(preset_file):
+            if not messagebox.askyesno(
+                "Overwrite", f"Preset '{preset_name}' already exists. Overwrite?"
+            ):
+                return
+
+        self._save_preset_to_file(preset_name)
+        self._update_preset_dropdown()
+        self.custom_preset_name.set(preset_name)
+        self.custom_preset_selected.set(preset_name)
+        self.selected_preset.set("custom")
+        self.preset_indicator.configure(
+            text=f"Preset saved: {preset_name}", text_color=ACCENT_BLUE
+        )
+
+    def _save_preset(self):
+        """Save current settings to selected preset"""
+        preset_name = self.custom_preset_name.get()
+        if not preset_name:
+            # If no preset selected, act like Save As
+            self._save_preset_as()
+            return
+
+        preset_file = os.path.join(self.presets_dir, f"{preset_name}.json")
+        if not os.path.exists(preset_file):
+            messagebox.showwarning(
+                "Warning",
+                f"Preset '{preset_name}' does not exist. Saving as new preset.",
+            )
+            self._save_preset_as()
+            return
+
+        self._save_preset_to_file(preset_name)
+        self.selected_preset.set("custom")
+        self.preset_indicator.configure(
+            text=f"Preset saved: {preset_name}", text_color=ACCENT_BLUE
+        )
+
+    def _save_preset_to_file(self, preset_name):
+        """Save current settings to preset file"""
+        try:
+            preset_file = os.path.join(self.presets_dir, f"{preset_name}.json")
+            settings = self._get_current_settings()
+
+            with open(preset_file, "w", encoding="utf-8") as file:
+                dump(settings, file, indent=4, ensure_ascii=False)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save preset: {str(e)}")
+
+    def _delete_preset(self):
+        """Delete selected preset"""
+        preset_name = self.custom_preset_name.get()
+        if not preset_name:
+            messagebox.showinfo("Info", "No preset selected to delete.")
+            return
+
+        preset_file = os.path.join(self.presets_dir, f"{preset_name}.json")
+        if not os.path.exists(preset_file):
+            messagebox.showerror("Error", f"Preset file not found: {preset_file}")
+            return
+
+        if messagebox.askyesno(
+            "Confirm Delete", f"Are you sure you want to delete preset '{preset_name}'?"
+        ):
+            try:
+                os.remove(preset_file)
+                self._update_preset_dropdown()
+                self.custom_preset_name.set("")
+                self.custom_preset_selected.set("")
+                self.selected_preset.set("none")
+                self.preset_indicator.configure(
+                    text=f"Preset deleted: {preset_name}", text_color=ACCENT_BLUE
+                )
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete preset: {str(e)}")
+
+    def _apply_settings_dict(self, settings_dict):
+        """Apply settings from dictionary to variables"""
+        # FFmpeg path
+        ffmpeg_path = settings_dict.get("ffmpeg_path", "")
+        if ffmpeg_path and os.path.exists(ffmpeg_path):
+            self.ffmpeg_custom_path.set(ffmpeg_path)
+
+        # Last directories
+        last_input_dir = settings_dict.get("last_input_dir", "")
+        if last_input_dir:
+            self.last_input_dir.set(last_input_dir)
+
+        last_output_dir = settings_dict.get("last_output_dir", "")
+        if last_output_dir:
+            self.last_output_dir.set(last_output_dir)
+
+        # Codec
+        codec = settings_dict.get("codec", "")
+        if codec in ["hevc", "h264", "av1", "vp9"]:
+            self.video_codec.set(codec)
+
+        # ICQ mode
+        icq_mode = settings_dict.get("icq_mode")
+        if icq_mode is not None:
+            self.icq_mode.set(icq_mode)
+
+        # Global quality level
+        global_quality_level = settings_dict.get("global_quality_level", "")
+        if global_quality_level:
+            self.global_quality_level.set(global_quality_level)
+
+        # Bitrate
+        bitrate = settings_dict.get("bitrate", "")
+        if bitrate:
+            self.bitrate.set(bitrate)
+
+        # Audio option
+        audio_option = settings_dict.get("audio_option", "")
+        if audio_option:
+            self.audio_option.set(audio_option)
+
+        # Custom audio bitrate
+        custom_abitrate = settings_dict.get("custom_abitrate", "")
+        if custom_abitrate:
+            self.custom_abitrate.set(custom_abitrate)
+
+        # Encoder settings
+        encoder_async_depth = settings_dict.get("encoder_async_depth", "")
+        if encoder_async_depth:
+            self.async_depth.set(encoder_async_depth)
+
+        encoder_preset = settings_dict.get("encoder_preset", "")
+        if encoder_preset:
+            self.preset.set(encoder_preset)
+
+        encoder_profile = settings_dict.get("encoder_profile", "")
+        if encoder_profile:
+            self.profile.set(encoder_profile)
+
+        encoder_scenario = settings_dict.get("encoder_scenario", "")
+        if encoder_scenario:
+            self.scenario.set(encoder_scenario)
+
+        encoder_threads = settings_dict.get("encoder_threads", "")
+        if encoder_threads:
+            self.threads.set(encoder_threads)
+
+        encoder_hwaccel = settings_dict.get("encoder_hwaccel", "")
+        if encoder_hwaccel:
+            self.hwaccel.set(encoder_hwaccel)
+
+        encoder_rc = settings_dict.get("encoder_rc", "")
+        if encoder_rc:
+            self.rc.set(encoder_rc)
+
+        encoder_tier = settings_dict.get("encoder_tier", "")
+        if encoder_tier:
+            self.tier.set(encoder_tier)
+
+        encoder_look_ahead_depth = settings_dict.get("encoder_look_ahead_depth", "")
+        if encoder_look_ahead_depth:
+            self.look_ahead_depth.set(encoder_look_ahead_depth)
+
+        # Boolean encoder settings
+        encoder_extbrc = settings_dict.get("encoder_extbrc")
+        if encoder_extbrc is not None:
+            self.extbrc.set(encoder_extbrc)
+
+        encoder_rdo = settings_dict.get("encoder_rdo")
+        if encoder_rdo is not None:
+            self.rdo.set(encoder_rdo)
+
+        encoder_mbbrc = settings_dict.get("encoder_mbbrc")
+        if encoder_mbbrc is not None:
+            self.mbbrc.set(encoder_mbbrc)
+
+        # FPS and scaling
+        fps_option = settings_dict.get("fps_option", "")
+        if fps_option:
+            self.fps_option.set(fps_option)
+
+        custom_fps = settings_dict.get("custom_fps", "")
+        if custom_fps:
+            self.custom_fps.set(custom_fps)
+
+        fps_mode = settings_dict.get("fps_mode", "")
+        if fps_mode:
+            self.fps_mode.set(fps_mode)
+
+        video_format_option = settings_dict.get("video_format_option", "")
+        if video_format_option:
+            self.video_format_option.set(video_format_option)
+
+        custom_video_width = settings_dict.get("custom_video_width", "")
+        if custom_video_width:
+            self.custom_video_width.set(custom_video_width)
+
+        interpolation_algo = settings_dict.get("interpolation_algo", "")
+        if interpolation_algo:
+            self.interpolation_algo.set(interpolation_algo)
+
+        # Trimming Settings
+        trim_start = settings_dict.get("trim_start", "")
+        if trim_start:
+            self.trim_start.set(trim_start)
+
+        trim_end = settings_dict.get("trim_end", "")
+        if trim_end:
+            self.trim_end.set(trim_end)
+
+        trim_streamcopy = settings_dict.get("trim_streamcopy")
+        if trim_streamcopy is not None:
+            self.trim_streamcopy.set(trim_streamcopy)
+
+        precise_trim = settings_dict.get("precise_trim")
+        if precise_trim is not None:
+            self.precise_trim.set(precise_trim)
+
+        # Additional Options
+        additional_options = settings_dict.get("additional_options", "")
+        if additional_options:
+            self.additional_options.set(additional_options)
+            self.additional_options_entry.configure(text_color=TEXT_COLOR_W)
+        else:
+            self.additional_options.set(self.additional_options_placeholder)
+            self.additional_options_entry.configure(text_color=PLACEHOLDER_COLOR)
+
+        additional_filter_options = settings_dict.get("additional_filter_options", "")
+        if additional_filter_options:
+            self.additional_filter_options.set(additional_filter_options)
+            self.additional_filter_options_entry.configure(text_color=TEXT_COLOR_W)
+        else:
+            self.additional_filter_options.set(
+                self.additional_filter_options_placeholder
+            )
+            self.additional_filter_options_entry.configure(text_color=PLACEHOLDER_COLOR)
+
+        additional_audio_filter_options = settings_dict.get(
+            "additional_audio_filter_options", ""
+        )
+        if additional_audio_filter_options:
+            self.additional_audio_filter_options.set(additional_audio_filter_options)
+            self.additional_audio_filter_options_entry.configure(
+                text_color=TEXT_COLOR_W
+            )
+        else:
+            self.additional_audio_filter_options.set(
+                self.additional_audio_filter_options_placeholder
+            )
+            self.additional_audio_filter_options_entry.configure(
+                text_color=PLACEHOLDER_COLOR
+            )
+
+        # Saved filters
+        saved_additional_options = settings_dict.get("saved_additional_options", "")
+        if saved_additional_options:
+            self.saved_additional_options.set(saved_additional_options)
+
+        saved_additional_filter_options = settings_dict.get(
+            "saved_additional_filter_options", ""
+        )
+        if saved_additional_filter_options:
+            self.saved_additional_filter_options.set(saved_additional_filter_options)
+
+        saved_additional_audio_filter_options = settings_dict.get(
+            "saved_additional_audio_filter_options", ""
+        )
+        if saved_additional_audio_filter_options:
+            self.saved_additional_audio_filter_options.set(
+                saved_additional_audio_filter_options
+            )
+
+        # Selected preset
+        selected_preset = settings_dict.get("selected_preset", "")
+        if selected_preset:
+            self.selected_preset.set(selected_preset)
+
+        # Custom preset selected
+        custom_preset_selected = settings_dict.get("custom_preset_selected", "")
+        if custom_preset_selected:
+            self.custom_preset_selected.set(custom_preset_selected)
+            self._update_preset_dropdown()
+            self.custom_preset_name.set(custom_preset_selected)
+
+        # Update UI
+        self._update_codec_settings()
+        self._toggle_icq_mode()
+        self._toggle_custom_abitrate()
+        self._toggle_custom_fps_entry()
+        self._toggle_custom_video_width_entry()
+        self._update_interpolation_description()
+
+        # Update trim slider if it exists
+        if hasattr(self, "trim_canvas"):
+            self.master.after(100, self._draw_trim_slider)
+
+        self._update_preset_indicator_from_settings(settings_dict)
+
+    def _get_current_settings(self):
+        """Get current settings as dictionary"""
+        settings = {
+            # Main Settings
+            "ffmpeg_path": self.ffmpeg_custom_path.get()
+            if self.ffmpeg_custom_path.get() != self.ffmpeg_path_placeholder
+            else "",
+            "last_input_dir": self.last_input_dir.get(),
+            "last_output_dir": self.last_output_dir.get(),
+            "codec": self.video_codec.get(),
+            "bitrate": self.bitrate.get(),
+            "icq_mode": self.icq_mode.get(),
+            "global_quality_level": self.global_quality_level.get(),
+            "audio_option": self.audio_option.get(),
+            "custom_abitrate": self.custom_abitrate.get(),
+            # Advanced Encoder Settings
+            "encoder_async_depth": self.async_depth.get(),
+            "encoder_preset": self.preset.get(),
+            "encoder_profile": self.profile.get(),
+            "encoder_scenario": self.scenario.get(),
+            "encoder_threads": self.threads.get(),
+            "encoder_hwaccel": self.hwaccel.get(),
+            "encoder_rc": self.rc.get(),
+            "encoder_tier": self.tier.get(),
+            "encoder_look_ahead_depth": self.look_ahead_depth.get(),
+            # Encoder Flags
+            "encoder_extbrc": self.extbrc.get(),
+            "encoder_rdo": self.rdo.get(),
+            "encoder_mbbrc": self.mbbrc.get(),
+            # FPS and scaling settings
+            "fps_option": self.fps_option.get(),
+            "custom_fps": self.custom_fps.get(),
+            "fps_mode": self.fps_mode.get(),
+            "video_format_option": self.video_format_option.get(),
+            "custom_video_width": self.custom_video_width.get(),
+            "interpolation_algo": self.interpolation_algo.get(),
+            # Trimming Settings
+            "trim_start": self.trim_start.get(),
+            "trim_end": self.trim_end.get(),
+            "trim_streamcopy": self.trim_streamcopy.get(),
+            "precise_trim": self.precise_trim.get(),
+            # Additional Options Fields
+            "additional_options": self.additional_options.get()
+            if self.additional_options.get() != self.additional_options_placeholder
+            else "",
+            "additional_filter_options": self.additional_filter_options.get()
+            if self.additional_filter_options.get()
+            != self.additional_filter_options_placeholder
+            else "",
+            "additional_audio_filter_options": self.additional_audio_filter_options.get()
+            if self.additional_audio_filter_options.get()
+            != self.additional_audio_filter_options_placeholder
+            else "",
+            # Saved custom filters
+            "saved_additional_options": self.saved_additional_options.get(),
+            "saved_additional_filter_options": self.saved_additional_filter_options.get(),
+            "saved_additional_audio_filter_options": self.saved_additional_audio_filter_options.get(),
+            "selected_preset": self.selected_preset.get(),
+            "custom_preset_selected": self.custom_preset_name.get()
+            if self.selected_preset.get() == "custom"
+            else "",
+            "version": "1.1.5",
+        }
+        return settings
+
+    def _update_preset_indicator_from_settings(self, settings_dict):
+        """Update preset indicator based on loaded settings"""
+        selected_preset = settings_dict.get("selected_preset", "")
+        custom_preset_selected = settings_dict.get("custom_preset_selected", "")
+
+        if not selected_preset or selected_preset == "none":
+            self.preset_indicator.configure(
+                text="No preset selected", text_color=PLACEHOLDER_COLOR
+            )
+        elif selected_preset == "custom" and custom_preset_selected:
+            self.preset_indicator.configure(
+                text=f"Loaded preset: {custom_preset_selected}", text_color=ACCENT_BLUE
+            )
+        elif selected_preset == "custom":
+            self.preset_indicator.configure(
+                text="Custom preset (unnamed)", text_color=ACCENT_BLUE
+            )
+        else:
+            preset_display_names = {
+                "fhdf": "FHD Fast",
+                "fhdq": "FHD Quality",
+                "hdf": "HD Fast",
+                "hdq": "HD Quality",
+            }
+            display_name = preset_display_names.get(selected_preset, selected_preset)
+            self.preset_indicator.configure(
+                text=f"{display_name} preset applied", text_color=ACCENT_BLUE
+            )
 
     # INTERFACE / CONVERSION CONTROL
     def _start_conversion(self):
@@ -2260,7 +2821,7 @@ class VideoConverterApp:
             command.extend(["-rc:v", self.rc.get(), "-b:v", f"{self.bitrate.get()}k"])
 
         # Constant FPS + No audio
-        command.extend(["-fps_mode", "cfr", "-an", output_file])
+        command.extend(["-fps_mode", self.fps_mode.get(), "-an", output_file])
 
         # PRINT THE COMMAND TO CONSOLE
         print("Screen recording command:")
@@ -2643,12 +3204,6 @@ class VideoConverterApp:
                 if self.video_codec.get() == "vp9"
                 else "_h264"
             )
-            output_path = os.path.normpath(
-                os.path.join(
-                    os.path.dirname(normalized_path),
-                    f"{base_name}{codec_suffix}_custom.mp4",
-                )
-            )
             if self.last_output_dir.get() and os.path.exists(
                 self.last_output_dir.get()
             ):
@@ -2763,159 +3318,23 @@ class VideoConverterApp:
                 with open(settings_file, "r", encoding="utf-8") as file:
                     settings = load(file)
 
-                # Load FFmpeg path
-                ffmpeg_path = settings.get("ffmpeg_path", "")
-                if (
-                    ffmpeg_path
-                    and os.path.exists(ffmpeg_path)
-                    and os.path.isfile(ffmpeg_path)
-                ):
-                    self.ffmpeg_path = ffmpeg_path
-                    # Look for ffprobe in the same directory
-                    ffprobe_path = os.path.join(
-                        os.path.dirname(ffmpeg_path), "ffprobe.exe"
-                    )
-                    if os.path.exists(ffprobe_path):
-                        self.ffprobe_path = ffprobe_path
-                    else:
-                        self.ffprobe_path = None
-
-                # Load last input dir
-                last_input_dir = settings.get("last_input_dir", "")
-                if last_input_dir:
-                    self.last_input_dir.set(last_input_dir)
-
-                # Load last output dir
-                last_output_dir = settings.get("last_output_dir", "")
-                if last_output_dir:
-                    self.last_output_dir.set(last_output_dir)
-
-                # Load last codec
-                last_codec = settings.get("codec", "")
-                if last_codec in ["hevc", "h264", "av1"]:
-                    self.video_codec.set(last_codec)
-
-                # ICQ state
-                icq_mode = settings.get("icq_mode")
-                if icq_mode is not None:
-                    self.icq_mode.set(icq_mode)
-
-                # ICQ quality
-                quality_level = settings.get("quality_level", "")
-                if quality_level:
-                    self.global_quality_level.set(quality_level)
-
-                # Load last bitrate
-                last_bitrate = settings.get("bitrate", "")
-                if last_bitrate:
-                    self.bitrate.set(last_bitrate)
-
-                # Load FPS and scaling settings
-                fps_option = settings.get("fps_option", "")
-                if fps_option:
-                    self.fps_option.set(fps_option)
-
-                custom_fps = settings.get("custom_fps", "")
-                if custom_fps:
-                    self.custom_fps.set(custom_fps)
-
-                fps_mode = settings.get("fps_mode", "")
-                if fps_mode:
-                    self.fps_mode.set(fps_mode)
-
-                video_format_option = settings.get("video_format_option", "")
-                if video_format_option:
-                    self.video_format_option.set(video_format_option)
-
-                custom_video_width = settings.get("custom_video_width", "")
-                if custom_video_width:
-                    self.custom_video_width.set(custom_video_width)
-
-                # Load audio option
-                last_audio_option = settings.get("audio_option", "")
-                if last_audio_option:
-                    self.audio_option.set(last_audio_option)
-
-                # Load custom audio bitrate
-                custom_abitrate = settings.get("custom_abitrate", "")
-                if custom_abitrate:
-                    self.custom_abitrate.set(custom_abitrate)
-
-                # Load Advanced Encoder Settings
-                encoder_threads = settings.get("encoder_threads", "")
-                if encoder_threads:
-                    self.threads.set(encoder_threads)
-
-                encoder_async_depth = settings.get("encoder_async_depth", "")
-                if encoder_async_depth:
-                    self.async_depth.set(encoder_async_depth)
-
-                encoder_preset = settings.get("encoder_preset", "")
-                if encoder_preset:
-                    self.preset.set(encoder_preset)
-
-                encoder_scenario = settings.get("encoder_scenario", "")
-                if encoder_scenario:
-                    self.scenario.set(encoder_scenario)
-
-                encoder_profile = settings.get("encoder_profile", "")
-                if encoder_profile:
-                    self.profile.set(encoder_profile)
-
-                encoder_tier = settings.get("encoder_tier", "")
-                if encoder_tier:
-                    self.tier.set(encoder_tier)
-
-                encoder_hwaccel = settings.get("encoder_hwaccel", "")
-                if encoder_hwaccel:
-                    self.hwaccel.set(encoder_hwaccel)
-
-                encoder_rc = settings.get("encoder_rc", "")
-                if encoder_rc:
-                    self.rc.set(encoder_rc)
-
-                encoder_look_ahead_depth = settings.get("encoder_look_ahead_depth", "")
-                if encoder_look_ahead_depth:
-                    self.look_ahead_depth.set(encoder_look_ahead_depth)
-
-                # Load boolean encoder settings
-                encoder_rdo = settings.get("encoder_rdo")
-                if encoder_rdo is not None:
-                    self.rdo.set(encoder_rdo)
-
-                encoder_mbbrc = settings.get("encoder_mbbrc")
-                if encoder_mbbrc is not None:
-                    self.mbbrc.set(encoder_mbbrc)
-
-                encoder_extbrc = settings.get("encoder_extbrc")
-                if encoder_extbrc is not None:
-                    self.extbrc.set(encoder_extbrc)
-
-                # Load saved custom filters
-                saved_additional_options = settings.get("saved_additional_options", "")
-                if saved_additional_options:
-                    self.saved_additional_options.set(saved_additional_options)
-
-                saved_additional_filter_options = settings.get(
-                    "saved_additional_filter_options", ""
-                )
-                if saved_additional_filter_options:
-                    self.saved_additional_filter_options.set(
-                        saved_additional_filter_options
-                    )
-
-                saved_additional_audio_filter_options = settings.get(
-                    "saved_additional_audio_filter_options", ""
-                )
-                if saved_additional_audio_filter_options:
-                    self.saved_additional_audio_filter_options.set(
-                        saved_additional_audio_filter_options
-                    )
-
-                return ffmpeg_path
+                # Apply settings from dictionary
+                self._apply_settings_dict(settings)
         except Exception as e:
             print(f"Error loading settings: {e}")
-        return None
+
+    def _save_settings(self):
+        """Save all settings to JSON file"""
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            settings_file = os.path.join(script_dir, "qff_settings.json")
+
+            settings = self._get_current_settings()
+
+            with open(settings_file, "w", encoding="utf-8") as file:
+                dump(settings, file, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
 
     def _save_custom_filters(self):
         current_options = self.additional_options.get().strip()
@@ -2988,58 +3407,11 @@ class VideoConverterApp:
                     text_color=PLACEHOLDER_COLOR
                 )
 
-    def _save_settings(self):
-        """Save all settings to JSON file"""
-        try:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            settings_file = os.path.join(script_dir, "qff_settings.json")
-
-            settings = {
-                # Main Settings
-                "ffmpeg_path": self.ffmpeg_custom_path.get()
-                if self.ffmpeg_custom_path.get() != self.ffmpeg_path_placeholder
-                else "",
-                "last_input_dir": self.last_input_dir.get(),
-                "last_output_dir": self.last_output_dir.get(),
-                "codec": self.video_codec.get(),
-                "bitrate": self.bitrate.get(),
-                "icq_mode": self.icq_mode.get(),
-                "quality_level": self.global_quality_level.get(),
-                "audio_option": self.audio_option.get(),
-                "custom_abitrate": self.custom_abitrate.get(),
-                # Advanced Encoder Settings
-                "encoder_threads": self.threads.get(),
-                "encoder_async_depth": self.async_depth.get(),
-                "encoder_preset": self.preset.get(),
-                "encoder_scenario": self.scenario.get(),
-                "encoder_profile": self.profile.get(),
-                "encoder_tier": self.tier.get(),
-                "encoder_hwaccel": self.hwaccel.get(),
-                "encoder_rc": self.rc.get(),
-                "encoder_look_ahead_depth": self.look_ahead_depth.get(),
-                "encoder_rdo": self.rdo.get(),
-                "encoder_mbbrc": self.mbbrc.get(),
-                "encoder_extbrc": self.extbrc.get(),
-                # FPS and scaling settings
-                "fps_option": self.fps_option.get(),
-                "custom_fps": self.custom_fps.get(),
-                "fps_mode": self.fps_mode.get(),
-                "video_format_option": self.video_format_option.get(),
-                "custom_video_width": self.custom_video_width.get(),
-                # Saved custom filters
-                "saved_additional_options": self.saved_additional_options.get(),
-                "saved_additional_filter_options": self.saved_additional_filter_options.get(),
-                "saved_additional_audio_filter_options": self.saved_additional_audio_filter_options.get(),
-                "version": "1.1.4",
-            }
-
-            with open(settings_file, "w", encoding="utf-8") as file:
-                dump(settings, file, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error saving settings: {e}")
-
     def _on_setting_changed(self):
         """Handle any setting change - debounced to avoid too frequent saves"""
+        if self.loading_preset:
+            return
+
         if hasattr(self, "_update_output_filename"):
             self._update_output_filename()
 
@@ -4751,6 +5123,8 @@ class VideoConverterApp:
                 text="Default settings applied", text_color=ACCENT_BLUE
             )
             self._toggle_icq_mode()
+            self._save_settings()
+            self.selected_preset.set("none")
 
         elif preset_name == "fhdf":
             # FHD Fast preset
@@ -4782,6 +5156,8 @@ class VideoConverterApp:
             self.preset_indicator.configure(
                 text="FHD Fast preset applied", text_color=ACCENT_BLUE
             )
+            self._save_settings()
+            self.selected_preset.set("fhdf")
 
         elif preset_name == "fhdq":
             # FHD Quality preset
@@ -4813,6 +5189,8 @@ class VideoConverterApp:
             self.preset_indicator.configure(
                 text="FHD Quality preset applied", text_color=ACCENT_BLUE
             )
+            self._save_settings()
+            self.selected_preset.set("fhdq")
 
         elif preset_name == "hdf":
             # HD Fast preset
@@ -4844,6 +5222,8 @@ class VideoConverterApp:
             self.preset_indicator.configure(
                 text="HD Fast preset applied", text_color=ACCENT_BLUE
             )
+            self._save_settings()
+            self.selected_preset.set("hdf")
 
         elif preset_name == "hdq":
             # HD Quality preset
@@ -4875,12 +5255,14 @@ class VideoConverterApp:
             self.preset_indicator.configure(
                 text="HD Quality preset applied", text_color=ACCENT_BLUE
             )
+            self._save_settings()
+            self.selected_preset.set("hdq")
 
         # Update UI
-        self._toggle_encoder_options_frame()
-        self._toggle_fps_scale_options_frame()
-        self._toggle_additional_options_frame()
-        self._update_window_size()
+        # self._toggle_encoder_options_frame()
+        # self._toggle_fps_scale_options_frame()
+        # self._toggle_additional_options_frame()
+        # self._update_window_size()
 
     def _apply_auto_encoder_settings(self):
         """Set all option menus with 'auto' to auto and uncheck all checkboxes."""
@@ -5080,6 +5462,78 @@ class VideoConverterApp:
         current = self.interpolation_algo.get()
         self.interpolation_description.set(descriptions.get(current, ""))
 
+    def _apply_command_changes(self, window):
+        new_command = self.command_textbox.get("1.0", "end-1c").strip()
+        if not new_command:
+            messagebox.showwarning("Warning", "Command is empty!")
+            return
+
+        try:
+            args = split(new_command, posix=False)
+
+            i = 0
+            while i < len(args):
+                if (":" in args[i] and "\\" in args[i]) or args[i].startswith("\\\\"):
+                    path_parts = [args[i]]
+                    j = i + 1
+                    while j < len(args) and not args[j].startswith("-"):
+                        path_parts.append(args[j])
+                        j += 1
+
+                    full_path = " ".join(path_parts)
+                    if full_path.startswith('"') and full_path.endswith('"'):
+                        full_path = full_path[1:-1]
+
+                    args = args[:i] + [full_path] + args[j:]
+                    i += 1
+                else:
+                    i += 1
+
+            if len(args) < 3:
+                raise ValueError("Command too short - not a valid FFmpeg command")
+
+            has_input = False
+            input_file = None
+            output_file = None
+
+            for i, arg in enumerate(args):
+                if arg == "-i" and i < len(args) - 1:
+                    has_input = True
+                    input_file = args[i + 1]
+
+            for i in range(1, len(args)):
+                if not args[i].startswith("-") and (i == 0 or args[i - 1] != "-i"):
+                    output_file = args[i]
+
+            if not has_input:
+                raise ValueError("Missing input file (-i option)")
+            if not output_file:
+                raise ValueError("Missing output file")
+            if not input_file:
+                raise ValueError("Input file not specified after -i option")
+
+            self.custom_command = args
+            self.ffmpeg_output.set("Custom command applied: " + " ".join(args))
+            self.output_window_open = False
+            window.destroy()
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Invalid command: {str(e)}\n\nPlease check:\n"
+                "1. Input file (-i option)\n"
+                "2. Output file path\n"
+                "3. Valid FFmpeg arguments\n\n"
+                f"Command: {new_command}",
+            )
+
+    def _reset_custom_command(self):
+        self.custom_command = None
+        self.ffmpeg_output.set("Custom command cleared – GUI settings are active again")
+        messagebox.showinfo(
+            "Reset", "Custom command has been cleared.\nGUI settings are now active."
+        )
+
     # WINDOW & FOCUS MANAGEMENT
     def _on_input_file_focus_in(self, event):
         current_text = self.input_file.get()
@@ -5189,6 +5643,11 @@ class VideoConverterApp:
 
         # keycode 86 = 'V'
         elif event.keycode == 86 and (event.state & 0x0004):  # Ctrl+V
+            # Do not intercept if US English layout is active
+            if is_us_english_layout():
+                # Let the event propagate (system default paste)
+                return None
+            # Otherwise use the custom paste handler
             self._paste_text()
             return "break"
 
@@ -5240,8 +5699,8 @@ class VideoConverterApp:
         if hasattr(widget, "insert"):
             try:
                 text = self.master.clipboard_get()
-                if hasattr(widget, "delete"):
-                    widget.delete(0, "end")
+                if hasattr(widget, "selection_present") and widget.selection_present():
+                    widget.delete("sel.first", "sel.last")
                 widget.insert("insert", text)
             except tk.TclError:
                 pass
@@ -5295,78 +5754,6 @@ class VideoConverterApp:
             self.ffmpeg_output.set("Command copied to clipboard!")
         except Exception as e:
             print(f"Error setting clipboard: {e}")
-
-    def _apply_command_changes(self, window):
-        new_command = self.command_textbox.get("1.0", "end-1c").strip()
-        if not new_command:
-            messagebox.showwarning("Warning", "Command is empty!")
-            return
-
-        try:
-            args = split(new_command, posix=False)
-
-            i = 0
-            while i < len(args):
-                if (":" in args[i] and "\\" in args[i]) or args[i].startswith("\\\\"):
-                    path_parts = [args[i]]
-                    j = i + 1
-                    while j < len(args) and not args[j].startswith("-"):
-                        path_parts.append(args[j])
-                        j += 1
-
-                    full_path = " ".join(path_parts)
-                    if full_path.startswith('"') and full_path.endswith('"'):
-                        full_path = full_path[1:-1]
-
-                    args = args[:i] + [full_path] + args[j:]
-                    i += 1
-                else:
-                    i += 1
-
-            if len(args) < 3:
-                raise ValueError("Command too short - not a valid FFmpeg command")
-
-            has_input = False
-            input_file = None
-            output_file = None
-
-            for i, arg in enumerate(args):
-                if arg == "-i" and i < len(args) - 1:
-                    has_input = True
-                    input_file = args[i + 1]
-
-            for i in range(1, len(args)):
-                if not args[i].startswith("-") and (i == 0 or args[i - 1] != "-i"):
-                    output_file = args[i]
-
-            if not has_input:
-                raise ValueError("Missing input file (-i option)")
-            if not output_file:
-                raise ValueError("Missing output file")
-            if not input_file:
-                raise ValueError("Input file not specified after -i option")
-
-            self.custom_command = args
-            self.ffmpeg_output.set("Custom command applied: " + " ".join(args))
-            self.output_window_open = False
-            window.destroy()
-
-        except Exception as e:
-            messagebox.showerror(
-                "Error",
-                f"Invalid command: {str(e)}\n\nPlease check:\n"
-                "1. Input file (-i option)\n"
-                "2. Output file path\n"
-                "3. Valid FFmpeg arguments\n\n"
-                f"Command: {new_command}",
-            )
-
-    def _reset_custom_command(self):
-        self.custom_command = None
-        self.ffmpeg_output.set("Custom command cleared – GUI settings are active again")
-        messagebox.showinfo(
-            "Reset", "Custom command has been cleared.\nGUI settings are now active."
-        )
 
     # FILTERS & OPTIONS MANAGEMENT
     def _set_speed_filter(self, speed_factor):
@@ -5763,14 +6150,6 @@ class VideoConverterApp:
         self._cleanup_preview_files()
         self.batch_files = []
         self.master.quit()
-
-
-def get_icon_path():
-    if getattr(sys, "frozen", False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.dirname(__file__)
-    return os.path.join(base_path, "qff.ico")
 
 
 root = ctk.CTk()

@@ -1,5 +1,10 @@
 # QuickFFSync - Changelog
 
+## [1.1.5] - 2026-02-19
+- Added the ability to create custom presets;
+- "Screen Record" now respects the selected FPS Mode;
+- Additional Options: improved text paste handling (custom filters) regardless of the current system keyboard layout.
+
 ## [1.1.4] - 2026-01-07
 - HighDPI support;
 - FFmpeg Command Preview: fixed "Copy to Clipboard";
