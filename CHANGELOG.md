@@ -1,5 +1,11 @@
 # QuickFFSync - Changelog
 
+## [1.1.6] - 2026-02-23
+- Additional Options: Save/Load buttons have been removed, as this functionality is now available via custom presets;
+- Additional Options: Added H-Flip and V-Flip filter buttons (mirror video horizontally/vertically);
+- UX/UI improvements for working with custom presets;
+- Added Ctrl+X handler (cut text).
+
 ## [1.1.5] - 2026-02-19
 - Added the ability to create custom presets;
 - "Screen Record" now respects the selected FPS Mode;
