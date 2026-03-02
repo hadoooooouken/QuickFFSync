@@ -73,9 +73,9 @@ If you want to run the application from its Python source code:
     cd QuickFFSync
     ```
 2.  **Install dependencies:**
-    The project uses `customtkinter`, `pillow`, `pywin32` (for `win32gui`, `win32con`, `win32api`).
+    The project uses `customtkinter`, `pillow`.
     ```bash
-    pip install customtkinter pillow pywin32
+    pip install customtkinter pillow
     ```
 3.  **Run the application:**
     ```
@@ -103,9 +103,10 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=qff-about.txt=./qff-about.txt ^
       --include-data-file=qff-license.txt=./qff-license.txt ^
       --include-data-file=nff-license.txt=./LICENSE.txt ^
+      --include-data-dir=presets=./presets ^
       --product-name="QuickFFSync" ^
-      --product-version="1.1.6" ^
-      --file-version="1.1.6" ^
+      --product-version="1.1.7" ^
+      --file-version="1.1.7" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
       --copyright="Copyright (C) 2026 hadouken" ^
