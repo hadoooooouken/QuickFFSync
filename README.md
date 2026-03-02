@@ -1,3 +1,5 @@
+![Version](https://img.shields.io/gitlab/v/release/hadoukez%2Fquickffsync?gitlab_url=https%3A%2F%2Fgitlab.com&color=blue&label=Version) ![License](https://img.shields.io/gitlab/license/hadoukez%2Fquickffsync?gitlab_url=https%3A%2F%2Fgitlab.com&color=green) ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white) ![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white) ![Intel](https://img.shields.io/badge/Intel-QSV-0071C5?logo=intel&logoColor=white)
+
 ![qff-mainwindow_start](screenshots/qff-mainwindow_start.png)
 
 # QuickFFSync 🚀
