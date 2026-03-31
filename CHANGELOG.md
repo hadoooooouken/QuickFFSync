@@ -1,5 +1,8 @@
 # QuickFFSync - Changelog
 
+## [1.2.1] - 2026-03-31
+- Code cleanup.
+
 ## [1.2.0] - 2026-03-10
 - Extended input video format support: .mp4, .mkv, .avi, .mov, .flv, .wmv, .webm, .ts, .m4v, .mpg, .mpeg, .m2ts, .mts, .3gp, .ogv, .ogm, .vob, .f4v, .asf, .divx;
 - Right-click **Play Output File** after a single convert to run a simplified VMAF comparison.
