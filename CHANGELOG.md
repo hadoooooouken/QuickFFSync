@@ -1,5 +1,10 @@
 # QuickFFSync - Changelog
 
+## [1.2.2] - 2026-04-19
+- The ability to stop screen recording from the system tray icon menu or using the Alt+F9 hotkey;
+- Better memory management and cleaning of processes (ffmpeg.exe) after closing the program;
+- Removed vfx presets that are not compatible with QSV (8bit_pixelation, glitchy_tv, vintage).
+
 ## [1.2.1] - 2026-03-31
 - Code cleanup.
 
