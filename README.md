@@ -107,8 +107,8 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=nff-license.txt=./LICENSE.txt ^
       --include-data-dir=presets=./presets ^
       --product-name="QuickFFSync" ^
-      --product-version="1.2.3" ^
-      --file-version="1.2.3" ^
+      --product-version="1.2.4" ^
+      --file-version="1.2.4" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
       --copyright="Copyright (C) 2026 hadouken" ^
