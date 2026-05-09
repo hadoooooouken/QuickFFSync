@@ -38,7 +38,7 @@ It provides a simple dark-themed interface with drag-and-drop support, presets, 
 - **Command preview** – shows full FFmpeg command, editable, copyable
 - **Real-time progress tracking** during conversion
 - **Batch Conversion:** Process multiple video files in one go with the same settings - perfect for converting entire folders of videos.
-- **Screen Recording:** Record your screen directly with Quick Sync encoding - choose frame rate and quality settings.
+- **Screen Recording:** Record your screen directly with Quick Sync encoding and capture Windows system audio - choose frame rate, audio codec, and quality settings.
 
 ![qff-mainwindow_start](screenshots/qff-mainwindow_settings.png)
 
@@ -75,9 +75,9 @@ If you want to run the application from its Python source code:
     cd QuickFFSync
     ```
 2.  **Install dependencies:**
-    The project uses `customtkinter`, `pillow`, `CTkToolTip`.
+    The project uses `customtkinter`, `pillow`, `CTkToolTip`, `pyaudiowpatch`.
     ```bash
-    pip install customtkinter pillow CTkToolTip
+    pip install customtkinter pillow CTkToolTip pyaudiowpatch
     ```
 3.  **Run the application:**
     ```
@@ -107,8 +107,8 @@ You can compile the Python script into a standalone Windows executable (`.exe`) 
       --include-data-file=nff-license.txt=./LICENSE.txt ^
       --include-data-dir=presets=./presets ^
       --product-name="QuickFFSync" ^
-      --product-version="1.2.5" ^
-      --file-version="1.2.5" ^
+      --product-version="1.2.6" ^
+      --file-version="1.2.6" ^
       --file-description="QuickFFSync" ^
       --company-name="Deepseek Enjoyer" ^
       --copyright="Copyright (C) 2026 hadouken" ^

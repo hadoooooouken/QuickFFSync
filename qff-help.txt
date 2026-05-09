@@ -468,7 +468,7 @@ The Screen Record feature allows you to capture Windows Desktop
 - Video Codec: H.264
 - Quality: ICQ mode or Bitrate mode as configured
 - Hardware Acceleration: Intel QSV
-- Audio capture: Not implemented for screen recording
+- Audio capture: Records system audio (WASAPI loopback). Uses the codec and bitrate configured in the "Audio Settings" section. Set Audio to "Disable audio" to record video without sound.
 
 #INTEL QUICK SYNC SPECIFIC FEATURES
 
