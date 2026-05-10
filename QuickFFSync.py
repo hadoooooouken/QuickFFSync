@@ -562,7 +562,7 @@ class TrayIcon:
         nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
         nid.uCallbackMessage = WM_USER_TRAY
         nid.hIcon = self._hicon
-        nid.szTip = "QuickFFSync 1.2.6"
+        nid.szTip = "QuickFFSync 1.2.7"
         return nid
 
     def show(self):
@@ -1245,7 +1245,7 @@ class VideoConverterApp:
         self.map_window = None
         self.map_selection_cache = {}
         self.master = master
-        master.title("QuickFFSync 1.2.6")
+        master.title("QuickFFSync 1.2.7")
 
         dpi = get_real_dpi()
         scaling = int(round((dpi / 96) * 100))
@@ -3526,7 +3526,7 @@ class VideoConverterApp:
             "batch_output_folder": self.batch_output_folder.get(),
             "batch_change_container": self.batch_change_container.get(),
             "batch_output_container": self.batch_output_container.get(),
-            "version": "1.2.6",
+            "version": "1.2.7",
         }
         return settings
 
@@ -3654,8 +3654,8 @@ class VideoConverterApp:
         date_str = now.strftime("%d_%m_%y-%H_%M_%S")
 
         # Get output file path
-        output_file = self.output_file.get()
-        if not output_file:
+        output_file = self.output_file.get().strip()
+        if not output_file or output_file == getattr(self, "output_file_placeholder", ""):
             # Generate default filename on desktop
             desktop = os.path.join(os.path.expanduser("~"), "Desktop")
             output_file = os.path.join(desktop, f"screen_record-{date_str}.mp4")

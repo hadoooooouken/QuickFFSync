@@ -1,5 +1,8 @@
 # QuickFFSync - Changelog
  
+## [1.2.7] - 2026-05-10
+- **Stability**: Minor bug fixes and improvements.
+
 ## [1.2.6] - 2026-05-10
 - **Screen Recording**: 
     - Screen recording now captures audio (unless "Disable audio" is selected);
