@@ -1,5 +1,8 @@
 # QuickFFSync - Changelog
  
+## [1.2.8] - 2026-05-11
+- **Maintenance**: Code cleanup and removal of redundant method definitions.
+
 ## [1.2.7] - 2026-05-10
 - **Stability**: Minor bug fixes and improvements.
 
