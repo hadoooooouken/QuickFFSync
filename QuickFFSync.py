@@ -1261,7 +1261,7 @@ class VideoConverterApp:
         self.map_window = None
         self.map_selection_cache = {}
         self.master = master
-        self.version = "1.2.9"
+        self.version = "1.3.0"
         master.title(f"QuickFFSync {self.version}")
 
         dpi = get_real_dpi()
@@ -1475,9 +1475,9 @@ class VideoConverterApp:
         self.threads = ctk.StringVar(value="4")
         self.async_depth = ctk.StringVar(value="auto")
         self.preset = ctk.StringVar(value="medium")
-        self.scenario = ctk.StringVar(value="archive")
+        self.scenario = ctk.StringVar(value="auto")
         self.profile = ctk.StringVar(value="main")
-        self.tier = ctk.StringVar(value="high")
+        self.tier = ctk.StringVar(value="auto")
         self.hwaccel = ctk.StringVar(value="auto")
         self.rdo = ctk.BooleanVar(value=True)
         self.mbbrc = ctk.BooleanVar(value=False)
@@ -4899,15 +4899,15 @@ class VideoConverterApp:
                 if add_val and add_val != self.additional_options_placeholder:
                     other_additional_options.extend(add_val.split())
 
-            # Add -map 0 and -ignore_unknown if not manually specified
-            if "-map" not in " ".join(other_additional_options):
-                command.extend(["-map", "0", "-ignore_unknown"])
-
             # Add trim options at the beginning if we have any
             if trim_options:
                 command.extend(trim_options)
 
             command.extend(["-y", "-i", input_f])
+
+            # Add -map 0 and -ignore_unknown if not manually specified
+            if "-map" not in " ".join(other_additional_options):
+                command.extend(["-map", "0", "-ignore_unknown"])
 
             # Add other additional options (excluding trim options that were already added)
             if other_additional_options:
@@ -5002,10 +5002,6 @@ class VideoConverterApp:
                 if add_val and add_val != self.additional_options_placeholder:
                     other_additional_options.extend(add_val.split())
 
-        # Add -map 0 and -ignore_unknown if not manually specified
-        if "-map" not in " ".join(other_additional_options):
-            command.extend(["-map", "0", "-ignore_unknown"])
-
         # Add trim options at the beginning if we have any
         if trim_options:
             command.extend(trim_options)
@@ -5021,6 +5017,10 @@ class VideoConverterApp:
             command.extend(["-threads", self.threads.get()])
 
         command.extend(["-y", "-i", input_f])
+
+        # Add -map 0 and -ignore_unknown if not manually specified
+        if "-map" not in " ".join(other_additional_options):
+            command.extend(["-map", "0", "-ignore_unknown"])
 
         # Normal encoding path
         if self.icq_mode.get():
@@ -6439,9 +6439,9 @@ class VideoConverterApp:
             self.threads.set("4")
             self.hwaccel.set("auto")
             self.preset.set("medium")
-            self.scenario.set("archive")
+            self.scenario.set("auto")
             self.profile.set("auto")
-            self.tier.set("high")
+            self.tier.set("auto")
             self.rc.set("vbr")
 
             # Flags

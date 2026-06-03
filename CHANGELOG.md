@@ -1,5 +1,10 @@
 # QuickFFSync - Changelog
- 
+
+## [1.3.0] - 2026-06-03
+- **FFmpeg Command**: Fixed option ordering by ensuring the default stream mapping (`-map 0 -ignore_unknown`) is placed after the input file (`-i`), resolving the "Option map cannot be applied to input url" error.
+- **HEVC QSV Defaults**: Changed default `Scenario` and `Tier` encoder options to `auto` to prevent HEVC QSV encoder launch failures due to hardware/driver parameter mismatches.
+- **Known Issue**: `hevc_qsv` fails to initialize on new Intel Core Ultra / Arrow Lake CPUs (e.g., Core 5 Ultra 225U) with `"some encoding parameters are not supported"` even with default/auto settings (while `h264_qsv`, `vp9_qsv`, and `av1_qsv` work perfectly). This is a driver-level or FFmpeg-VPL runtime regression with no current software workaround. Use `av1_qsv` as a working alternative.
+
 ## [1.2.9] - 2026-05-12
 - **Save As**: Fixed Save As dialog so the selected container extension (MP4/MKV/MOV) is applied correctly and placeholder text is not offered as the default file name.
 - **Tooltip**: Cleaned up file information tooltips by filtering out verbose Chapters blocks.
