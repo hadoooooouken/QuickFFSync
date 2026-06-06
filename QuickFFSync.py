@@ -1261,7 +1261,7 @@ class VideoConverterApp:
         self.map_window = None
         self.map_selection_cache = {}
         self.master = master
-        self.version = "1.3.0"
+        self.version = "1.3.1"
         master.title(f"QuickFFSync {self.version}")
 
         dpi = get_real_dpi()
@@ -5057,7 +5057,7 @@ class VideoConverterApp:
 
         # Add encoder settings based on mode
         codec_map = {"hevc": "hevc_qsv", "av1": "av1_qsv", "vp9": "vp9_qsv"}
-        command.extend(["-c:v", codec_map.get(self.video_codec.get(), "h264_qsv")])
+        command.extend(["-c:v", "copy", "-c:v:0", codec_map.get(self.video_codec.get(), "h264_qsv")])
 
         if self.async_depth.get() != "auto":
             command.extend(["-async_depth:v", self.async_depth.get()])
@@ -5123,6 +5123,18 @@ class VideoConverterApp:
         self._append_audio_options(command)
 
         command.append(output_f)
+
+        # Post-process: target video encoder options to the first video stream (:v:0)
+        # to avoid applying them to copied streams (like cover art/attached pics).
+        v0_targets = {
+            "-preset:v", "-profile:v", "-level:v", "-tier:v",
+            "-async_depth:v", "-scenario:v", "-rdo:v", "-mbbrc:v", "-extbrc:v",
+            "-look_ahead_depth:v", "-global_quality:v",
+            "-rc:v", "-b:v", "-maxrate:v", "-bufsize:v"
+        }
+        for idx in range(len(command)):
+            if command[idx] in v0_targets:
+                command[idx] = command[idx] + ":0"
 
         return command
 
